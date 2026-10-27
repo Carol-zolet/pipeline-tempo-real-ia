@@ -1,0 +1,14 @@
+# Segredos: nunca versionar
+.env
+*.pem
+*.key
+*.secret
+api-keys*.txt
+
+# Config do conector com valores reais (gerada em runtime)
+cdc-debezium/*.rendered.json
+
+# Sistema / editor
+.DS_Store
+.idea/
+.vscode/
