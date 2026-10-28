@@ -66,14 +66,42 @@ Para os statements Flink, remove os conectores, apaga o replication slot no Post
 
 ## Camada 1: Fundação (`kafka/`)
 
-**O que faz:** `<descreva: environment, cluster, service accounts>`
+**O que faz:**
 
-**Por que assim:** `<descreva: duas identidades (escrita/leitura) por menor privilégio; cluster Basic pelo volume e custo>`
+- Environment `desafio-final` (`env-o7mj39`), com Stream Governance Essentials, isolado do environment `default`.
+- Cluster Kafka **Basic** `desafio-basic` (`lkc-dozgd01`) em `aws/us-east-1`, single-zone.
+- Duas identidades (service accounts), uma por papel, com uma chave de API cada:
+  - `desafio-producer` (`sa-v1y03yn`): `WRITE`, `DESCRIBE` e `CREATE` nos tópicos com prefixo `desafio`.
+  - `desafio-consumer` (`sa-gkx8gjn`): `READ` e `DESCRIBE` nos tópicos `desafio*` e `READ` nos grupos de consumo `desafio*`.
 
-**Evidência:**
+**Por que assim:**
+
+- **Duas identidades, menor privilégio:** quem escreve não lê e quem lê não escreve. Se a chave do consumer vazar, ela não consegue gravar no tópico.
+- **ACL por prefixo (`desafio`):** limita o alcance aos tópicos do projeto, incluindo os que o conector CDC vai criar. Em produção, o RBAC é o padrão e a ACL é a exceção documentada (Aula 3); aqui a ACL por prefixo segue o desenho do desafio.
+- **Cluster Basic:** é o tipo certo para dev e POC (Aula 2) e só cobra pelo uso. O volume do desafio (cerca de 2.000 transações sintéticas) cabe com folga. Em produção, o trade-off seria Standard ou superior, por SLA e rede privada.
+- **Environment dedicado:** dá uma fronteira de isolamento e permite derrubar tudo com um único `delete` no teardown.
+
+**Evidência** (`evidencias/01-fundacao.txt`: `service-account list`, `acl list` de cada identidade e `api-key list`; os secrets nunca aparecem):
 
 ```text
-<sua evidência aqui: confluent iam service-account list + acl list por SA>
+  Current |     ID     |       Name       |          Description           
+----------+------------+------------------+--------------------------------
+          | sa-gkx8gjn | desafio-consumer | le os topicos desafio-*        
+          | sa-v1y03yn | desafio-producer | escreve nos topicos desafio-*  
+     Principal    | Permission | Operation | Resource Type | Resource Name | Pattern Type  
+------------------+------------+-----------+---------------+---------------+---------------
+  User:sa-v1y03yn | ALLOW      | CREATE    | TOPIC         | desafio       | PREFIXED      
+  User:sa-v1y03yn | ALLOW      | DESCRIBE  | TOPIC         | desafio       | PREFIXED      
+  User:sa-v1y03yn | ALLOW      | WRITE     | TOPIC         | desafio       | PREFIXED      
+     Principal    | Permission | Operation | Resource Type | Resource Name | Pattern Type  
+------------------+------------+-----------+---------------+---------------+---------------
+  User:sa-gkx8gjn | ALLOW      | DESCRIBE  | TOPIC         | desafio       | PREFIXED      
+  User:sa-gkx8gjn | ALLOW      | READ      | GROUP         | desafio       | PREFIXED      
+  User:sa-gkx8gjn | ALLOW      | READ      | TOPIC         | desafio       | PREFIXED      
+  Current |       Key        |   Description    |   Owner    |    Owner Email    | Resource Type |  Resource   |       Created         
+----------+------------------+------------------+------------+-------------------+---------------+-------------+-----------------------
+          | OT4XULKQTJXJI642 | desafio-producer | sa-v1y03yn | <service account> | kafka         | lkc-dozgd01 | 2026-10-28T22:30:07Z  
+          | UDONLAMX2PE5ECZA | desafio-consumer | sa-gkx8gjn | <service account> | kafka         | lkc-dozgd01 | 2026-10-28T22:34:01Z  
 ```
 
 ## Camada 2: Contrato de dados (`kafka/schemas/`)
