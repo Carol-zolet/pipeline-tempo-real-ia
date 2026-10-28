@@ -28,7 +28,9 @@ contrato() {
 
 ingestao() {
   echo ">> Camada 3: Ingestão CDC (pasta cdc-debezium/)"
-  # TODO: no Postgres: replicação lógica (Neon: Settings), cdc_user, REPLICA IDENTITY FULL, seed (cdc-debezium/seed/)
+  # PRÉ-REQUISITOS (manuais, no Neon): replicação lógica ligada (Settings) e role cdc_user criado com REPLICATION
+  # Carrega schema (REPLICA IDENTITY FULL), seed (seed=42) e permissões do CDC, e grava a contagem em evidencias/:
+  ./cdc-debezium/seed/load.sh
   # TODO: renderizar o conector sem versionar segredos e criá-lo
   #   envsubst < cdc-debezium/cdc.json > cdc-debezium/cdc.rendered.json   # (gitignored)
   #   confluent connect cluster create --config-file cdc-debezium/cdc.rendered.json
