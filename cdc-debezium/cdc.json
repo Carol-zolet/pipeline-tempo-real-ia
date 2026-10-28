@@ -10,6 +10,9 @@
   "database.dbname": "${PG_DB}",
   "topic.prefix": "${TOPIC_PREFIX}",
   "table.include.list": "public.customers,public.accounts,public.cards,public.merchants,public.transactions",
+  "publication.name": "desafio_pub",
+  "publication.autocreate.mode": "disabled",
+  "slot.name": "desafio_slot",
   "output.data.format": "AVRO",
   "heartbeat.interval.ms": "60000",
   "tasks.max": "1"
