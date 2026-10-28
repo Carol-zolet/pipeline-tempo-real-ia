@@ -12,3 +12,11 @@ cdc-debezium/*.rendered.json
 .DS_Store
 .idea/
 .vscode/
+
+# Binários locais (ex.: Confluent CLI instalada aqui por engano)
+bin/
+
+# Variações do .env (backups do editor) nunca vão para o git; o exemplo continua versionado
+.env.*
+!.env.example
+*.save
