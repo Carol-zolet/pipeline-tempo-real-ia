@@ -1,0 +1,12 @@
+=== add-optional ===
++------------+------+
+| Compatible | true |
++------------+------+
+=== add-required ===
++------------+-------+
+| Compatible | false |
++------------+-------+
+=== remove-required ===
++------------+------+
+| Compatible | true |
++------------+------+

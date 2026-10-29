@@ -106,15 +106,16 @@ Para os statements Flink, remove os conectores, apaga o replication slot no Post
 
 ## Camada 2: Contrato de dados (`kafka/schemas/`)
 
-**O que faz:** `<descreva: schemas, namespace, tipo de money, tags de PII>`
+**O que faz:** O Debezium registra automaticamente um schema Avro por tabela no Schema Registry (subjects `desafio.public.<tabela>-value`, envelope com `before`/`after`/`source`/`op`). Esses schemas são o contrato do pipeline; em `kafka/schemas/` ficam o schema atual de `customers` e três variantes usadas nos testes de evolução.
 
-**Por que assim:** `<descreva: modo de compatibilidade escolhido e porquê>`
+**Por que assim:** Mantive a compatibilidade `BACKWARD` (padrão do Schema Registry): o consumidor novo lê dados antigos, então os consumidores (Flink, Tableflow) podem ser atualizados antes do produtor. Nessa regra, adicionar campo opcional com `default` é seguro; adicionar campo obrigatório sem `default` quebra, porque o consumidor novo não saberia preencher o campo nos dados antigos. Remover campo é aceito em `BACKWARD` (o consumidor novo ignora o que sumiu); para barrar remoções seria preciso `FORWARD` ou `FULL`, trade-off que registrei na tabela de decisões. Os testes usam `validate`, que não registra versão e não suja o subject.
 
-**Evidência:**
+**Evidência** (`evidencias/02-compatibilidade.txt`, subject `desafio.public.customers-value`, versão 1):
 
 ```text
-<sua evidência aqui: test-compatibility aceitando campo novo com default>
-<sua evidência aqui: test-compatibility REJEITANDO remoção de campo obrigatório>
+=== add-optional ===      Compatible | true    (campo novo opcional, default null)
+=== add-required ===      Compatible | false   (campo novo obrigatório, sem default)
+=== remove-required ===   Compatible | true    (remoção de `email`: aceita em BACKWARD)
 ```
 
 ## Camada 3: Ingestão CDC (`cdc-debezium/`)

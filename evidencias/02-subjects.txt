@@ -1,0 +1,8 @@
+                     Subject                      
+--------------------------------------------------
+  __debezium-heartbeat-lcc-w7k23kj.desafio-value  
+  desafio.public.accounts-value                   
+  desafio.public.cards-value                      
+  desafio.public.customers-value                  
+  desafio.public.merchants-value                  
+  desafio.public.transactions-value               
