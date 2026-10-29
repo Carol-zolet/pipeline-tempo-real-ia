@@ -7,6 +7,9 @@ ROOT="$(cd ../.. && pwd)"
 [ -f "$ROOT/.env" ] || { echo "Falta o .env na raiz do repositório"; exit 1; }
 set -a; source "$ROOT/.env"; set +a
 export PGPASSWORD="$PG_ADMIN_PASSWORD" PGSSLMODE=require
+# Neon exige SNI. Clientes psql antigos (libpq < 14) não o enviam; o contorno é informar o endpoint
+# (1a parte do host, ex.: ep-xxxx) via PGOPTIONS. Com libpq novo, é redundante e inofensivo.
+export PGOPTIONS="endpoint=${PG_HOST%%.*}"
 PSQL=(psql -h "$PG_HOST" -p "${PG_PORT:-5432}" -U "$PG_ADMIN_USER" -d "$PG_DB" -v ON_ERROR_STOP=1)
 
 [ -f 02_seed.sql ] || python3 generate_seed.py > 02_seed.sql
