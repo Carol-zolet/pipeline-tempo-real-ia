@@ -126,7 +126,12 @@ Para os statements Flink, remove os conectores, apaga o replication slot no Post
 **Evidência:**
 
 ```text
-<sua evidência aqui: contagem das tabelas após o seed>
+Seed determinístico (`seed=42`) carregado no Postgres 18 do Neon (`cdc-debezium/seed/load.sh`):
+
+ customers | accounts | cards | merchants | transactions 
+-----------+----------+-------+-----------+--------------
+       200 |      240 |   320 |        60 |         2000
+(1 row)
 ```
 
 Eventos capturados (envelopes completos em `evidencias/`):
