@@ -1,0 +1,8 @@
+// Tópico desafio.public.customers (dados sintéticos). Mensagens copiadas do console do Confluent.
+// A mensagem op=u aparece truncada no console; o trecho omitido está marcado com "...".
+// --- op=c (INSERT) offset 200, key {"customer_id":201}
+{ "before": null, "after": { "customer_id": 201, "full_name": "Teste CDC", "email": "teste.cdc@example.com", "phone": "+55 51 90000-0000", "city": "Nova Prata", "created_at": "2026-10-29T00:28:14.419316Z" }, "source": { "connector": "postgresql", "version": "3.2.5.Final", "table": "customers", "lsn": 30242008, "txId": 2094 }, "op": "c" }
+// --- op=u (UPDATE) offset 201, key {"customer_id":201} (before: city "Nov..." = Nova Prata)
+{ "before": { "customer_id": 201, "full_name": "Teste CDC", "email": "teste.cdc@example.com", "phone": "+55 51 90000-0000", "city": "Nova Prata", ... }, "after": { ..., "city": "Caxias do Sul" }, "source": { "lsn": 30242768, "txId": 2096 }, "op": "u" }
+// --- op=d (DELETE) offset 202, key {"customer_id":201}
+{ "before": { "customer_id": 201, "full_name": "Teste CDC", "email": "teste.cdc@example.com", "phone": "+55 51 90000-0000", "city": "Caxias do Sul", "created_at": "2026-10-29T00:28:14.419316Z" }, "after": null, "source": { "lsn": 30244984, "txId": 2099 }, "op": "d" }

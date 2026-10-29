@@ -16,3 +16,11 @@
 ----------+------------------+------------------+------------+-------------------+---------------+-------------+-----------------------
           | OT4XULKQTJXJI642 | desafio-producer | sa-v1y03yn | <service account> | kafka         | lkc-dozgd01 | 2026-10-28T22:30:07Z  
           | UDONLAMX2PE5ECZA | desafio-consumer | sa-gkx8gjn | <service account> | kafka         | lkc-dozgd01 | 2026-10-28T22:34:01Z  
+     Principal    | Permission | Operation | Resource Type |    Resource Name     | Pattern Type  
+------------------+------------+-----------+---------------+----------------------+---------------
+  User:sa-v1y03yn | ALLOW      | CREATE    | TOPIC         | __debezium-heartbeat | PREFIXED      
+  User:sa-v1y03yn | ALLOW      | CREATE    | TOPIC         | desafio              | PREFIXED      
+  User:sa-v1y03yn | ALLOW      | DESCRIBE  | TOPIC         | __debezium-heartbeat | PREFIXED      
+  User:sa-v1y03yn | ALLOW      | DESCRIBE  | TOPIC         | desafio              | PREFIXED      
+  User:sa-v1y03yn | ALLOW      | WRITE     | TOPIC         | __debezium-heartbeat | PREFIXED      
+  User:sa-v1y03yn | ALLOW      | WRITE     | TOPIC         | desafio              | PREFIXED      

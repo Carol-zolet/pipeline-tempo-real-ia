@@ -119,9 +119,9 @@ Para os statements Flink, remove os conectores, apaga o replication slot no Post
 
 ## Camada 3: Ingestão CDC (`cdc-debezium/`)
 
-**O que faz:** `<descreva: conector, usuário cdc_user, tabelas capturadas>` (config em `cdc-debezium/cdc.json`, sem segredos).
+**O que faz:** Conector gerenciado `PostgresCdcSourceV2` (Debezium 3.2.5) lê o WAL do Postgres (Neon) com o usuário `cdc_user` (permissão mínima de replicação) e publica as 5 tabelas (`customers`, `accounts`, `cards`, `merchants`, `transactions`) em tópicos `desafio.public.<tabela>`, em Avro, com a chave primária como chave Kafka. (config em `cdc-debezium/cdc.json`, sem segredos).
 
-**Por que assim:** `<descreva: CDC e não batch/polling; REPLICA IDENTITY escolhida e custo>`
+**Por que assim:** CDC lê o log de transações, então captura INSERT, UPDATE e DELETE com baixa latência e sem consultar as tabelas; polling perderia DELETEs e estados intermediários. Usei `REPLICA IDENTITY FULL` para que `before` venha completo em UPDATE/DELETE (custo: mais bytes no WAL). Cada tópico tem 1 partição (padrão do conector), o que preserva a ordem global, mas limita o paralelismo. Lição de menor privilégio: o conector também precisou de ACL (CREATE/DESCRIBE/WRITE) no prefixo `__debezium-heartbeat`; sem ela ficou `FAILED` por falta de autorização.
 
 **Evidência:**
 
@@ -136,9 +136,9 @@ Seed determinístico (`seed=42`) carregado no Postgres 18 do Neon (`cdc-debezium
 
 Eventos capturados (envelopes completos em `evidencias/`):
 
-- `op=c` (INSERT): `<evidência>`
-- `op=u` (UPDATE): `<evidência: before preenchido?>`
-- `op=d` (DELETE): `<evidência>`
+- `op=c` (INSERT): `before: null`, `after` com `city = Nova Prata` (offset 200)
+- `op=u` (UPDATE): `before` preenchido com `Nova Prata` e `after` com `Caxias do Sul` (offset 201)
+- `op=d` (DELETE): `before` completo, `after: null` (offset 202); a mesma chave `customer_id=201` nos 3 eventos preserva a ordem na partição
 
 ## Camada 4: Processamento (`flink-sql/`)
 
