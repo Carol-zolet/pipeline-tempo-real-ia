@@ -1,0 +1,12 @@
++--------------+--------------+
+| Current      | false        |
+| ID           | lfcp-zmkyk73 |
+| Name         | desafio-pool |
+| Cloud        | AWS          |
+| Environment  | env-o7mj39   |
+| Max CFU      | 5            |
+| Region       | us-east-1    |
+| Current CFU  | 0            |
+| Status       | PROVISIONED  |
+| Default Pool | false        |
++--------------+--------------+
