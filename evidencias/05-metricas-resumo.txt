@@ -1,0 +1,7 @@
+Período consultado (UTC): 2026-10-28T00:00:00Z a 2026-10-29T23:52:29Z; cluster lkc-dozgd01
+== received_bytes por minuto ==
+Pico: 492200 bytes no minuto 2026-10-29T00:19:00Z (soma de todos os tópicos)
+Maior ponto de um único tópico: 396094 bytes (desafio.public.transactions) em 2026-10-29T00:19:00Z
+Total produzido no período: 819509 bytes
+== consumer_lag_offsets ==
+(nenhum grupo de consumidores com lag no período: sem consumidores ativos)

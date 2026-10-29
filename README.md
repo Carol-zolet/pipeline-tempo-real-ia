@@ -172,10 +172,29 @@ card_id | first_ts                | last_ts                 | tx_count | total_a
 
 | Pilar | Resposta (medida) |
 |---|---|
-| Observabilidade | `<pico de received_bytes e lag por grupo (Metrics API)>` |
-| Segurança | `<tabela: service account → ACLs → porquê>` |
-| Custos | `<billing cost list do período + 2 alavancas>` |
-| Confiabilidade | `<tabela trecho a trecho; elo mais fraco>` |
+| Observabilidade | Metrics API (`scripts/metrics.sh`, resumo em `evidencias/05-metricas-resumo.txt`): pico de `received_bytes` de **492.200 bytes em 1 minuto** (29/10 00:19 UTC = 28/10 21:19 em Brasília), no snapshot inicial do conector; 396.094 bytes só do tópico `desafio.public.transactions`. Total produzido de 28/10 a 29/10: **819.509 bytes**. **Lag por grupo: nenhum grupo de consumidores ativo** (`evidencias/05-consumer-lag.png`), porque o Flink lê por dentro da plataforma e não há consumidor externo. |
+| Segurança | Tabela abaixo. Duas service accounts com ACLs por prefixo `desafio`, sem permissão em outros tópicos. |
+| Custos | Ver "Custo total e teardown". Alavancas: (1) cluster **Basic** em vez de Standard/Dedicated; (2) **teardown** logo após as evidências e statements Flink parados, porque cluster, conector e CFU cobram por hora de uso; o compute pool tem teto de 5 CFU. |
+| Confiabilidade | Tabela abaixo; elo mais fraco: o conector com `tasks.max=1` e o slot de replicação no Postgres. |
+
+**Segurança: service account → ACLs → porquê**
+
+| Service account | ACLs (prefixo `desafio`, salvo indicado) | Por quê |
+|---|---|---|
+| `desafio-producer` (`sa-v1y03yn`) | `CREATE`, `DESCRIBE`, `WRITE` em tópicos `desafio*`; os mesmos três em `__debezium-heartbeat*` | É a identidade do conector CDC: só escreve. A ACL do heartbeat foi descoberta quando o conector ficou `FAILED` ("not authorized to access the designated topic"): o Debezium grava um tópico de batimento fora do prefixo do projeto. Corrigi com a menor ACL possível em vez de dar permissão ampla. |
+| `desafio-consumer` (`sa-gkx8gjn`) | `DESCRIBE` e `READ` em tópicos `desafio*`; `READ` em grupos `desafio*` | Identidade só de leitura para consumidores. Hoje ninguém a usa (o Flink roda com o usuário da conta); fica pronta para um consumidor externo ou um sink connector. |
+
+Limitação: os statements Flink rodam com o usuário pessoal, e o RBAC é o padrão recomendado em produção (Aula 3). Aqui usei ACLs por prefixo, que são mais simples para um ambiente com dois papéis. Evidência: `evidencias/01-fundacao.txt`.
+
+**Confiabilidade: trecho a trecho**
+
+| Trecho | Garantia / risco | Mitigação |
+|---|---|---|
+| Postgres (Neon) → conector | Conector com `tasks.max=1`; o slot de replicação retém WAL se o conector parar (slot órfão enche o disco); no plano Free o compute pode suspender | `heartbeat.interval.ms=60000`; o teardown apaga o slot |
+| Conector → Kafka | Entrega *at-least-once*: após reinício o mesmo evento pode chegar duplicado | Chave = chave primária; consumidores devem ser idempotentes |
+| Tópicos | 1 partição por tópico: ordem garantida por chave, sem paralelismo; cluster Basic é de zona única | Volume do projeto é pequeno (~820 KB) |
+| Schema Registry | `BACKWARD`: campo obrigatório sem default é barrado na entrada | Testes em `evidencias/02-compatibilidade.txt` |
+| Flink | O alerta depende do watermark (precisa de evento posterior); evento muito fora de ordem é ignorado | Watermark de 1 ms; em produção o fluxo contínuo avança o watermark |
 
 ## Extensão: Tableflow + Iceberg (`tableflow-iceberg/`)
 
@@ -187,16 +206,20 @@ Cada decisão relevante tomada durante o desenvolvimento é documentada aqui, co
 
 | # | Decisão | Alternativa descartada | Por quê / trade-off |
 |---|---|---|---|
-| 1 | CDC (Debezium) | Polling/batch | `<preencher>` |
-| 2 | 2 service accounts (write/read) | 1 conta com tudo | `<preencher>` |
-| 3 | Compatibilidade `<escolha>` | `<outra>` | `<preencher>` |
-| 4 | `REPLICA IDENTITY <escolha>` | `<outra>` | `<preencher>` |
-| 5 | `<modelagem da regra de fraude>` | `<outra>` | `<preencher>` |
-| 6 | Cluster Basic | Standard/Dedicated | `<preencher>` |
+| 1 | CDC (Debezium) | Polling/batch | O CDC lê o log de transações: captura INSERT/UPDATE/DELETE com baixa latência e sem consultar as tabelas; polling perderia DELETEs e estados intermediários. Custo: depende de replicação lógica, slot e WAL. |
+| 2 | 2 service accounts (write/read) | 1 conta com tudo | Menor privilégio: o conector só escreve, o consumidor só lê; se uma chave vazar, o dano é limitado. Custo: mais identidades e ACLs para gerenciar. |
+| 3 | Compatibilidade `BACKWARD` | `FULL` | Permite atualizar consumidores antes do produtor e barra campo obrigatório sem default. Trade-off: aceita remoção de campo; para barrar remoções seria preciso `FULL`/`FORWARD`, mais restritivo para o produtor. |
+| 4 | `REPLICA IDENTITY FULL` | `DEFAULT` (só chave) | `before` completo em UPDATE/DELETE (evidência `op=u`/`op=d`). Custo: mais bytes no WAL por mudança. |
+| 5 | `MATCH_RECOGNIZE` por cartão, `T{3}` em 60 s, tempo de evento | `OVER` com `COUNT`/`LAG`, tempo de processamento | Padrão de sequência explícito, estado por cartão, resultado independente do atraso do pipeline. Custo: exige entrada append-only (`TO_CHANGELOG`) e watermark. |
+| 6 | Cluster Basic | Standard/Dedicated | Menor custo para um projeto de volume baixo (~820 KB). Custo: zona única e menos recursos de rede e segurança. |
+| 7 | Neon (Postgres gerenciado) | Postgres local em Docker | Sem infraestrutura local e acessível pela nuvem; o conector gerenciado precisa de um banco alcançável pela internet. Custo: plano Free com compute que pode suspender e exigência de SNI. |
 
 ## Trade-offs gerais do pipeline
 
-_(preencher conforme o desafio avança, por exemplo: latência vs. consistência, custo de cluster vs. throughput.)_
+- **Latência vs. custo:** o pipeline entrega o alerta em segundos, mas isso exige statements Flink contínuos que cobram CFU enquanto rodam; por isso foram parados após a evidência.
+- **Simplicidade vs. paralelismo:** 1 partição e `tasks.max=1` mantêm a ordem e simplificam, mas limitam a escala.
+- **Rigor do contrato vs. flexibilidade:** `BACKWARD` aceita remoção de campo; `FULL` seria mais rígido.
+- **Alerta imediato vs. correção de tempo:** o watermark de 1 ms libera o alerta cedo, mas ignora eventos muito fora de ordem.
 
 ## Custo total e teardown
 
