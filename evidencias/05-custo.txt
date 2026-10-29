@@ -1,0 +1,4 @@
+  Start Date |  End Date  | Granularity |  Line Type   | Product | Resource | Resource Name | Environment | Network Access Type | Price | Original Amount | Discount Amount | Amount  
+-------------+------------+-------------+--------------+---------+----------+---------------+-------------+---------------------+-------+-----------------+-----------------+---------
+  2026-10-28 | 2026-10-29 | DAILY       | PROMO_CREDIT |         |          |               |             |                     |       | $0.00           |                 | $0.00   
+  2026-10-28 | 2026-10-29 | DAILY       | PROMO_CREDIT |         |          |               |             |                     |       | $0.00           |                 | $0.00   
