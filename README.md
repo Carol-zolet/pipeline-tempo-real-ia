@@ -143,15 +143,29 @@ Eventos capturados (envelopes completos em `evidencias/`):
 
 ## Camada 4: Processamento (`flink-sql/`)
 
-**O que faz:** `<descreva: enriquecimento transação × conta e regra de fraude: 3 transações no mesmo cartão em 60 s>`
+**O que faz:** Dois statements Flink SQL contínuos num compute pool de até 5 CFU. (1) `tx-stream-insert` converte `desafio.public.transactions` (changelog `retract` do Debezium) numa tabela append-only `tx_stream`, com `created_at` convertido para `TIMESTAMP(3)` e watermark. (2) `fraud-detect` aplica um `MATCH_RECOGNIZE` particionado por cartão e grava em `fraud_alerts` quando há 3 transações do mesmo cartão em até 60 s (`PATTERN (T{3}) WITHIN INTERVAL '60' SECOND`). Statements em `flink-sql/01..04_*.sql`.
 
-**Por que assim:** `<descreva: tipo de join, modelagem da janela e trade-offs>`
+**Por que assim:**
+- `MATCH_RECOGNIZE` não aceita entrada que atualiza ou apaga linhas, então a tabela do Debezium passa por `TO_CHANGELOG` (só inserts; transações são imutáveis) antes da regra.
+- O tempo da regra é o tempo do evento (`created_at`), não o de chegada, para que atrasos do pipeline não mudem o resultado.
+- Watermark com folga de 1 ms: o aviso `WATERMARK_EQUAL` do Flink mostrou que, sem folga, eventos com o mesmo `ts` contam como atrasados. Folga maior atrasaria o alerta; folga menor perderia eventos. Evento muito fora de ordem continua sendo ignorado.
+- Como o `MATCH_RECOGNIZE` só libera uma linha quando o watermark a ultrapassa e a tabela tem pouco tráfego, o alerta depende de um evento posterior de qualquer cartão. Em produção o fluxo contínuo resolve isso; no teste uso uma transação de outro cartão.
+- `AFTER MATCH SKIP PAST LAST ROW`: uma rajada gera um alerta, não vários sobrepostos.
+- Um join de enriquecimento com `accounts` ficou fora desta entrega: o join temporal descartaria as transações do seed, porque as contas só têm versão a partir do snapshot e as transações são de setembro. Um join comum guardaria estado sem limite. Fica como próximo passo.
 
-**Evidência:**
+**Evidência** (`evidencias/04-fraude.txt`):
 
 ```text
-<sua evidência aqui: o alerta emitido no tópico de fraude
- + as 3 transações (mesmo card_id, <60s) que o dispararam>
+Antes da rajada: fraud_alerts vazia (nenhum falso positivo nas 2000 transações do seed)
+
+transaction_id | card_id | amount | ts
+2001           | 1       | 100.00 | 2026-10-29 22:59:02.958
+2002           | 1       | 101.00 | 2026-10-29 22:59:12.958
+2003           | 1       | 102.00 | 2026-10-29 22:59:22.958
+
+Alerta em fraud_alerts:
+card_id | first_ts                | last_ts                 | tx_count | total_amount | first_tx_id | last_tx_id
+1       | 2026-10-29 22:59:02.958 | 2026-10-29 22:59:22.958 | 3        | 303.00       | 2001        | 2003
 ```
 
 ## Camada 5: Operação

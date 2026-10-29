@@ -1,0 +1,18 @@
+Camada 4: regra de fraude (3 transações no mesmo cartão em até 60 s), Flink SQL em Confluent Cloud.
+Statements contínuos: tx-stream-insert (RUNNING), fraud-detect (RUNNING), pool lfcp-zmkyk73 (max 5 CFU).
+
+1) Antes da rajada: fraud_alerts vazia (nenhum falso positivo nas 2000 transações do seed).
+
+2) Rajada injetada no Postgres (cdc-debezium/seed/03_fraud_burst.sql) + 1 transação de outro cartão
+   para avançar o watermark. Transações vistas em tx_stream:
+
+   transaction_id | card_id | amount | ts
+   2001           | 1       | 100.00 | 2026-10-29 22:59:02.958
+   2002           | 1       | 101.00 | 2026-10-29 22:59:12.958
+   2003           | 1       | 102.00 | 2026-10-29 22:59:22.958
+   2004           | 2       |  25.00 | 2026-10-29 22:59:33.147   (outro cartão, não dispara alerta)
+
+3) Alerta emitido em fraud_alerts:
+
+   card_id | first_ts                | last_ts                 | tx_count | total_amount | first_tx_id | last_tx_id
+   1       | 2026-10-29 22:59:02.958 | 2026-10-29 22:59:22.958 | 3        | 303.00       | 2001        | 2003
