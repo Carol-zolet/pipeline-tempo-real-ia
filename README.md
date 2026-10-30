@@ -198,7 +198,25 @@ Limitação: os statements Flink rodam com o usuário pessoal, e o RBAC é o pad
 
 ## Extensão: Tableflow + Iceberg (`tableflow-iceberg/`)
 
-`<opcional: materializar os tópicos como tabelas Iceberg; o que foi feito e evidência>`
+**O que foi feito:** O Tableflow materializou os tópicos `tx_stream` (2004 transações) e `fraud_alerts` (o alerta de fraude) como tabelas **Apache Iceberg**, com armazenamento gerenciado pela Confluent e catálogo **Confluent REST**. O script `scripts/query_iceberg.py` consulta as tabelas com `pyiceberg` pelo catálogo REST, sem copiar dados.
+
+**Por que assim:** O Tableflow não materializa direto os tópicos do Debezium: o formato de envelope (`avro-debezium-registry`) não é aceito nos modos append e upsert, e a alternativa seria reconfigurar o conector (`after.state.only=true`) ou decodificar o envelope no Flink, mexendo num pipeline já validado. Por isso materializei a **saída do Flink**, em Avro comum e append-only, fechando a trilha Debezium → Flink → Tableflow → Iceberg. Trade-off: as tabelas Iceberg trazem o dado já enriquecido pelo Flink, e não um espelho das tabelas do Postgres.
+
+**Evidência** (`evidencias/06-iceberg.txt`):
+
+```text
+Namespace (cluster): lkc-dozgd01
+Tabelas: ['tx_stream', 'fraud_alerts']
+
+== fraud_alerts ==  Linhas: 1  Snapshots: 3
+card_id:long, first_ts:timestamp, last_ts:timestamp, tx_count:long, total_amount:decimal(15, 2), first_tx_id:long, last_tx_id:long
+card_id=1  first_ts=2026-10-29 22:59:02.958  last_ts=2026-10-29 22:59:22.958  tx_count=3  total_amount=303.00  first_tx_id=2001  last_tx_id=2003
+
+== tx_stream ==  Linhas: 2004  Snapshots: 3
+card_id:long, transaction_id:long, account_id:long, merchant_id:long, amount:decimal(15, 2), currency:string, status:string, ts:timestamp
+```
+
+Observações: `DECIMAL(15,2)` e `TIMESTAMP(3)` voltam com os tipos corretos; a chave da mensagem (`card_id`) é materializada como coluna; o Tableflow acrescenta colunas `$$topic`, `$$partition` e `$$offset` para rastrear a origem de cada linha. O Tableflow cobra por tópico habilitado, então foi desabilitado após a evidência.
 
 ## Decisões de arquitetura
 
