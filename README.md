@@ -241,11 +241,30 @@ Cada decisão relevante tomada durante o desenvolvimento é documentada aqui, co
 
 ## Custo total e teardown
 
-- **Custo declarado:** `<US$ X,XX: billing cost list>`
-- `./teardown.sh` executado ao final:
+- **Custo declarado:** _a preencher com o `confluent billing cost list` (período 27/10 a 30/10/2026). A cobrança da Confluent leva de 24 a 48 horas para aparecer: a consulta feita em 29/10 (`evidencias/05-custo.txt`) ainda mostrava só linhas de crédito promocional de US$ 0,00, sem os itens de cluster, conector e Flink._
+- **Infraestrutura ativa:** de 27/10 (cluster), 28/10 (conector) e 29/10 (Flink e Tableflow) até o teardown em 30/10/2026. O cluster ficou ligado por mais tempo do que o necessário entre as etapas; o teardown foi o último passo.
+- `./teardown.sh` executado em 30/10/2026 (saída completa em `evidencias/07-teardown.txt`):
 
 ```text
-<sua evidência aqui: connect cluster list / flink statement list → None found.>
+>> 2/6 Remover conectores
+Deleted connector "lcc-w7k23kj".
+>> 3/6 Remover o replication slot e a publication no Postgres
+DROP PUBLICATION
+Slots restantes no Postgres: 0
+>> 4/6 Apagar API keys extras (Cloud e Tableflow) e as chaves do Kafka
+Deleted API key "V3I3IEEXIY32DGWB".   (Cloud)
+Deleted API key "3V3IFXH3RCAAPL4T".   (Tableflow)
+Deleted API key "OT4XULKQTJXJI642".   (Kafka)
+>> 5/6 Apagar as service accounts
+Deleted IAM service account "sa-v1y03yn".
+Deleted IAM service account "sa-gkx8gjn".
+>> 6/6 Deletar o environment
+Deleted environment "env-o7mj39".
+
+>> Verificação
+--- confluent environment list      -> só o environment "default" (padrão da conta)
+--- confluent iam service-account list -> None found.
+--- confluent api-key list             -> None found.
 ```
 
 ## Autora
