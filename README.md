@@ -43,16 +43,18 @@ O caso de uso do desafio é um **pipeline de pagamentos**: Postgres (Neon) → C
 
 ## Como subir do zero
 
-Pré-requisitos: conta no Confluent Cloud, projeto no Neon, [Confluent CLI](https://docs.confluent.io/confluent-cli/current/overview.html), `psql`, `envsubst`.
+Pré-requisitos: conta no Confluent Cloud, projeto no Neon, [Confluent CLI](https://docs.confluent.io/confluent-cli/current/overview.html), `psql`, `envsubst`, `python3`.
 
 ```bash
 cp .env.example .env     # preencha os valores; o .env NUNCA é versionado
 ./setup.sh fundacao      # confira a evidência antes de avançar
-./setup.sh contrato
 ./setup.sh ingestao
+./setup.sh contrato      # depois da ingestão: os schemas são registrados pelo conector
 ./setup.sh processamento
 ./setup.sh operacao
 ```
+
+**Estado de validação, com honestidade:** os comandos de cada função foram executados durante o desenvolvimento (evidências em `evidencias/`), mas o `setup.sh` **não foi reexecutado do zero** nesta entrega; o `teardown.sh` foi (`evidencias/07-teardown.txt`). Dois passos são manuais: habilitar a replicação lógica e criar o `cdc_user` no Neon (console), e rodar os arquivos de `flink-sql/` no shell do Flink. Dentro do script, os trechos marcados `[não testado]` vêm da documentação e devem ser conferidos antes de confiar.
 
 ## Como derrubar tudo
 
