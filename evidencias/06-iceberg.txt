@@ -1,0 +1,20 @@
+Namespace (cluster): lkc-dozgd01
+Tabelas: ['tx_stream', 'fraud_alerts']
+
+== fraud_alerts ==
+Colunas: card_id:long, first_ts:timestamp, last_ts:timestamp, tx_count:long, total_amount:decimal(15, 2), first_tx_id:long, last_tx_id:long, $$topic:string, $$partition:int, $$headers:map<string, binary>, $$leader-epoch:int, $$offset:long, $$timestamp:timestamptz, $$timestamp-type:string, $$raw-key:binary, $$raw-value:binary
+Snapshots: 3
+Linhas: 1
+   card_id                first_ts                 last_ts  tx_count total_amount  first_tx_id  last_tx_id       $$topic  $$partition $$headers  $$leader-epoch  $$offset                      $$timestamp $$timestamp-type                        $$raw-key                                                                                                           $$raw-value
+0        1 2026-10-29 22:59:02.958 2026-10-29 22:59:22.958         3       303.00         2001        2003  fraud_alerts            0        []               0         0 2026-10-29 23:00:22.385000+00:00       CreateTime  b'\x00\x00\x01\x86\xa9\x02\x02'  b'\x00\x00\x01\x86\xaa\x02\xdc\x8a\x9b\x9e\xb1h\x02\x9c\xc3\x9d\x9e\xb1h\x02\x06\x02\x04v\\\x02\xa2\x1f\x02\xa6\x1f'
+
+== tx_stream ==
+Colunas: card_id:long, transaction_id:long, account_id:long, merchant_id:long, amount:decimal(15, 2), currency:string, status:string, ts:timestamp, $$topic:string, $$partition:int, $$headers:map<string, binary>, $$leader-epoch:int, $$offset:long, $$timestamp:timestamptz, $$timestamp-type:string, $$raw-key:binary, $$raw-value:binary
+Snapshots: 3
+Linhas: 2004
+   card_id  transaction_id  account_id  merchant_id  amount currency    status                  ts    $$topic  $$partition $$headers  $$leader-epoch  $$offset                      $$timestamp $$timestamp-type                            $$raw-key                                                                                                        $$raw-value
+0      102               1         102           45   54.54      BRL  APPROVED 2026-09-17 00:02:59  tx_stream            0        []               0         0 2026-10-29 22:53:19.781000+00:00       CreateTime  b'\x00\x00\x01\x86\xa7\x02\xcc\x01'  b'\x00\x00\x01\x86\xa8\x02\x02\x02\xcc\x01\x02Z\x02\x04\x15N\x02\x06BRL\x02\x10APPROVED\x02\xf0\xdc\xe3\xca\x95h'
+1      200               2         200           31   90.16      BRL  APPROVED 2026-09-17 00:17:18  tx_stream            0        []               0         1 2026-10-29 22:53:19.790000+00:00       CreateTime  b'\x00\x00\x01\x86\xa7\x02\x90\x03'     b'\x00\x00\x01\x86\xa8\x02\x04\x02\x90\x03\x02>\x02\x04#8\x02\x06BRL\x02\x10APPROVED\x02\xe0\xca\xcc\xcb\x95h'
+2      111               3         111           59   28.72      BRL  APPROVED 2026-09-17 00:18:43  tx_stream            0        []               0         2 2026-10-29 22:53:19.790000+00:00       CreateTime  b'\x00\x00\x01\x86\xa7\x02\xde\x01'  b'\x00\x00\x01\x86\xa8\x02\x06\x02\xde\x01\x02v\x02\x04\x0b8\x02\x06BRL\x02\x10APPROVED\x02\xf0\xfa\xd6\xcb\x95h'
+3      275               4          42           59  117.62      BRL  DECLINED 2026-09-17 00:19:49  tx_stream            0        []               0         3 2026-10-29 22:53:19.860000+00:00       CreateTime  b'\x00\x00\x01\x86\xa7\x02\xa6\x04'         b'\x00\x00\x01\x86\xa8\x02\x08\x02T\x02v\x02\x04-\xf2\x02\x06BRL\x02\x10DECLINED\x02\x90\x82\xdf\xcb\x95h'
+4      258               5           9           59  166.90      BRL  APPROVED 2026-09-17 00:20:50  tx_stream            0        []               0         4 2026-10-29 22:53:19.860000+00:00       CreateTime  b'\x00\x00\x01\x86\xa7\x02\x84\x04'           b'\x00\x00\x01\x86\xa8\x02\n\x02\x12\x02v\x02\x04A2\x02\x06BRL\x02\x10APPROVED\x02\xa0\xbb\xe6\xcb\x95h'
