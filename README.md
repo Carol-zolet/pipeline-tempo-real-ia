@@ -179,6 +179,14 @@ card_id | first_ts                | last_ts                 | tx_count | total_a
 | Custos | Ver "Custo total e teardown". Alavancas: (1) cluster **Basic** em vez de Standard/Dedicated; (2) **teardown** logo após as evidências e statements Flink parados, porque cluster, conector e CFU cobram por hora de uso; o compute pool tem teto de 5 CFU. |
 | Confiabilidade | Tabela abaixo; elo mais fraco: o conector com `tasks.max=1` e o slot de replicação no Postgres. |
 
+**Prints do console (Confluent Cloud, cluster `desafio-basic`)**
+
+| Throughput (últimos 7 dias) | Consumer lag |
+|---|---|
+| ![Throughput do cluster](evidencias/05-throughput.png) | ![Consumer lag: sem consumidores ativos](evidencias/05-consumer-lag.png) |
+
+O gráfico do console agrega os valores em intervalos largos e por isso mostra picos de poucas dezenas de bytes; o valor exato por minuto vem da Metrics API (`evidencias/05-metricas-resumo.txt`), citado na tabela acima.
+
 **Segurança: service account → ACLs → porquê**
 
 | Service account | ACLs (prefixo `desafio`, salvo indicado) | Por quê |
