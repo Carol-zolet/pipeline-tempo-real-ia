@@ -4,7 +4,7 @@ Projeto desenvolvido no bootcamp **IBM Confluent - Dados em tempo real para agen
 
 ## Objetivo
 
-Construir um pipeline de dados end-to-end em tempo real, usando **Confluent Cloud (Kafka)** como espinha dorsal, capturando mudanças de sistemas existentes via CDC, processando o fluxo com Flink e materializando os dados como tabelas Iceberg, pronto para alimentar RAG e agentes de IA.
+Construir um pipeline de dados end-to-end em tempo real, usando **Confluent Cloud (Kafka)** como espinha dorsal, capturando mudanças de sistemas existentes via CDC, processando o fluxo com Flink e materializando os dados como tabelas Iceberg, como base para RAG e agentes de IA. Nesta entrega o pipeline vai até o Iceberg; a camada de IA (inferência, embeddings, agentes) não foi implementada e está em "Próximos passos".
 
 O caso de uso do desafio é um **pipeline de pagamentos**: Postgres (Neon) → CDC (Debezium) → tópicos Avro + Schema Registry → Flink SQL (enriquecimento + regra de fraude) → consumo. Os dados são sintéticos (seed determinístico, `seed=42`).
 
@@ -23,23 +23,24 @@ O caso de uso do desafio é um **pipeline de pagamentos**: Postgres (Neon) → C
 
 | Pasta / arquivo | Camada | Conteúdo |
 |---|---|---|
-| `kafka/` | 1 Fundação, 2 Contrato | cluster, service accounts, ACLs; `kafka/schemas/` com os schemas Avro |
+| `kafka/schemas/` | 2 Contrato | schema Avro atual de `customers` e as variantes usadas nos testes de compatibilidade (a fundação da camada 1 é criada pelo `setup.sh`) |
 | `cdc-debezium/` | 3 Ingestão | `cdc.json` (conector, sem segredos) e `seed/` (dados sintéticos) |
 | `flink-sql/` | 4 Processamento | statements SQL: enriquecimento e regra de fraude |
-| `tableflow-iceberg/` | Extensão | tópicos materializados como tabelas Iceberg (opcional) |
+| `tableflow-iceberg/` | Extensão | `query_iceberg.py`: consulta as tabelas Iceberg pelo catálogo REST |
+| `scripts/` | 5 Operação | `metrics.sh`: consulta à Metrics API |
 | `evidencias/` | todas | saídas de comandos e eventos que provam cada camada |
 | `setup.sh` / `teardown.sh` | todas | subir e derrubar o pipeline |
 
 ## Status
 
-🚧 Em desenvolvimento, acompanhando os módulos do bootcamp (inscrições até 18/10, entrega até 15/11/2026)
+✅ Entregue em 31/10/2026 (inscrições até 18/10, entrega até 15/11/2026). A infraestrutura já foi derrubada (`teardown.sh`); o repositório guarda as evidências.
 
-- [ ] Módulo 1: Kafka (arquitetura orientada a eventos, partições, garantia de entrega)
-- [ ] Módulo 2: Confluent Cloud (environments, service accounts, Schema Registry)
-- [ ] Módulo 3: Kafka Connect + CDC com Debezium
-- [ ] Módulo 4: Flink SQL (processamento do fluxo)
-- [ ] Módulo 5: Tableflow (tópicos Kafka → tabelas Apache Iceberg)
-- [ ] Desafio Final consolidado
+- [x] Módulo 1: Kafka (chave por PK preserva ordem; entrega *at-least-once*; 1 partição)
+- [x] Módulo 2: Confluent Cloud (environment, cluster Basic, service accounts, ACLs, Schema Registry)
+- [x] Módulo 3: Kafka Connect + CDC com Debezium (sink connectors e dead letter topic **não** feitos)
+- [x] Módulo 4: Flink SQL (conversão para append-only, watermark, `MATCH_RECOGNIZE`; join de enriquecimento **não** entregue)
+- [x] Módulo 5: Tableflow (tópicos Kafka → tabelas Apache Iceberg)
+- [x] Desafio Final consolidado (custo final a confirmar; ver "Custo total e teardown")
 
 ## Como subir do zero
 
@@ -108,7 +109,7 @@ Para os statements Flink, remove os conectores, apaga o replication slot no Post
 
 ## Camada 2: Contrato de dados (`kafka/schemas/`)
 
-**O que faz:** O Debezium registra automaticamente um schema Avro por tabela no Schema Registry (subjects `desafio.public.<tabela>-value`, envelope com `before`/`after`/`source`/`op`). Esses schemas são o contrato do pipeline; em `kafka/schemas/` ficam o schema atual de `customers` e três variantes usadas nos testes de evolução.
+**O que faz:** O Debezium registra automaticamente um schema Avro por tabela no Schema Registry (subjects `desafio.public.<tabela>-value`, envelope com `before`/`after`/`source`/`op`). Esses schemas são o contrato do pipeline (namespace `desafio.public.<tabela>` gerado pelo conector, não um namespace próprio; `amount` aparece como `bytes` com `decimal(15,2)` no Avro). **Não apliquei tags de PII/PCI** no Schema Registry: os campos sensíveis (`customers.full_name`, `email`, `phone`; `cards.last4`) estão apenas comentados em `00_schema.sql`. Em `kafka/schemas/` ficam o schema atual de `customers` e três variantes usadas nos testes de evolução.
 
 **Por que assim:** Mantive a compatibilidade `BACKWARD` (padrão do Schema Registry): o consumidor novo lê dados antigos, então os consumidores (Flink, Tableflow) podem ser atualizados antes do produtor. Nessa regra, adicionar campo opcional com `default` é seguro; adicionar campo obrigatório sem `default` quebra, porque o consumidor novo não saberia preencher o campo nos dados antigos. Remover campo é aceito em `BACKWARD` (o consumidor novo ignora o que sumiu); para barrar remoções seria preciso `FORWARD` ou `FULL`, trade-off que registrei na tabela de decisões. Os testes usam `validate`, que não registra versão e não suja o subject.
 
@@ -137,13 +138,15 @@ Seed determinístico (`seed=42`) carregado no Postgres 18 do Neon (`cdc-debezium
 (1 row)
 ```
 
-Eventos capturados (envelopes completos em `evidencias/`):
+Eventos capturados (`evidencias/03-envelopes-cdc.json`; o console truncou o envelope `op=u`, que ficou com `...` no trecho omitido, e o tombstone que o Debezium emite depois do DELETE não foi conferido):
 
 - `op=c` (INSERT): `before: null`, `after` com `city = Nova Prata` (offset 200)
 - `op=u` (UPDATE): `before` preenchido com `Nova Prata` e `after` com `Caxias do Sul` (offset 201)
 - `op=d` (DELETE): `before` completo, `after: null` (offset 202); a mesma chave `customer_id=201` nos 3 eventos preserva a ordem na partição
 
 ## Camada 4: Processamento (`flink-sql/`)
+
+**Escopo entregue:** conversão para append-only e regra de fraude. O **enriquecimento transação × conta** (join com `accounts`) ficou de fora; a justificativa está nas decisões abaixo.
 
 **O que faz:** Dois statements Flink SQL contínuos num compute pool de até 5 CFU. (1) `tx-stream-insert` converte `desafio.public.transactions` (changelog `retract` do Debezium) numa tabela append-only `tx_stream`, com `created_at` convertido para `TIMESTAMP(3)` e watermark. (2) `fraud-detect` aplica um `MATCH_RECOGNIZE` particionado por cartão e grava em `fraud_alerts` quando há 3 transações do mesmo cartão em até 60 s (`PATTERN (T{3}) WITHIN INTERVAL '60' SECOND`). Statements em `flink-sql/01..04_*.sql`.
 
@@ -204,11 +207,12 @@ Limitação: os statements Flink rodam com o usuário pessoal, e o RBAC é o pad
 | Conector → Kafka | Entrega *at-least-once*: após reinício o mesmo evento pode chegar duplicado | Chave = chave primária; consumidores devem ser idempotentes |
 | Tópicos | 1 partição por tópico: ordem garantida por chave, sem paralelismo; cluster Basic é de zona única | Volume do projeto é pequeno (~820 KB) |
 | Schema Registry | `BACKWARD`: campo obrigatório sem default é barrado na entrada | Testes em `evidencias/02-compatibilidade.txt` |
+| Consumidor → efeito | Não há consumidor neste projeto; em um consumidor real, a idempotência é código do consumidor (o conector entrega *at-least-once*) | Chave = PK permite deduplicar |
 | Flink | O alerta depende do watermark (precisa de evento posterior); evento muito fora de ordem é ignorado | Watermark de 1 ms; em produção o fluxo contínuo avança o watermark |
 
 ## Extensão: Tableflow + Iceberg (`tableflow-iceberg/`)
 
-**O que foi feito:** O Tableflow materializou os tópicos `tx_stream` (2004 transações) e `fraud_alerts` (o alerta de fraude) como tabelas **Apache Iceberg**, com armazenamento gerenciado pela Confluent e catálogo **Confluent REST**. O script `scripts/query_iceberg.py` consulta as tabelas com `pyiceberg` pelo catálogo REST, sem copiar dados.
+**O que foi feito:** O Tableflow materializou os tópicos `tx_stream` (2004 transações) e `fraud_alerts` (o alerta de fraude) como tabelas **Apache Iceberg**, com armazenamento gerenciado pela Confluent e catálogo **Confluent REST**. O script `tableflow-iceberg/query_iceberg.py` consulta as tabelas com `pyiceberg` pelo catálogo REST, sem copiar dados.
 
 **Por que assim:** O Tableflow não materializa direto os tópicos do Debezium: o formato de envelope (`avro-debezium-registry`) não é aceito nos modos append e upsert, e a alternativa seria reconfigurar o conector (`after.state.only=true`) ou decodificar o envelope no Flink, mexendo num pipeline já validado. Por isso materializei a **saída do Flink**, em Avro comum e append-only, fechando a trilha Debezium → Flink → Tableflow → Iceberg. Trade-off: as tabelas Iceberg trazem o dado já enriquecido pelo Flink, e não um espelho das tabelas do Postgres.
 
@@ -226,7 +230,7 @@ card_id=1  first_ts=2026-10-29 22:59:02.958  last_ts=2026-10-29 22:59:22.958  tx
 card_id:long, transaction_id:long, account_id:long, merchant_id:long, amount:decimal(15, 2), currency:string, status:string, ts:timestamp
 ```
 
-Observações: `DECIMAL(15,2)` e `TIMESTAMP(3)` voltam com os tipos corretos; a chave da mensagem (`card_id`) é materializada como coluna; o Tableflow acrescenta colunas `$$topic`, `$$partition` e `$$offset` para rastrear a origem de cada linha. O Tableflow cobra por tópico habilitado, então foi desabilitado após a evidência.
+Observações: `DECIMAL(15,2)` e `TIMESTAMP(3)` voltam com os tipos corretos; a chave da mensagem (`card_id`) é materializada como coluna; o Tableflow acrescenta colunas `$$topic`, `$$partition` e `$$offset` para rastrear a origem de cada linha. O Tableflow cobra por tópico habilitado; ele ficou ativo até o teardown e foi removido junto com o environment.
 
 ## Decisões de arquitetura
 
@@ -255,6 +259,8 @@ Cada decisão relevante tomada durante o desenvolvimento é documentada aqui, co
 - **Infraestrutura ativa:** de 27/10 (cluster), 28/10 (conector) e 29/10 (Flink e Tableflow) até o teardown em 30/10/2026. O cluster ficou ligado por mais tempo do que o necessário entre as etapas; o teardown foi o último passo.
 - `./teardown.sh` executado em 30/10/2026 (saída completa em `evidencias/07-teardown.txt`):
 
+Os comandos `connect cluster list` e `flink statement list` deixam de funcionar depois que o environment é apagado; a verificação final usa as listas de environments, service accounts e API keys.
+
 ```text
 >> 2/6 Remover conectores
 Deleted connector "lcc-w7k23kj".
@@ -276,6 +282,27 @@ Deleted environment "env-o7mj39".
 --- confluent iam service-account list -> None found.
 --- confluent api-key list             -> None found.
 ```
+
+## Próximos passos
+
+- Join de enriquecimento (transação × conta), avaliando join temporal ou join comum com TTL de estado.
+- Tags de PII/PCI e regras de qualidade no Schema Registry (data contracts).
+- Dead letter topic e SMT para eventos com defeito; sink connector para entregar o alerta fora do Kafka.
+- Camada de IA: inferência de modelo no Flink SQL, embeddings e agentes sobre `fraud_alerts`.
+- RBAC no lugar de ACLs e Flink com service account própria.
+
+## Rastreabilidade com o curso
+
+| Tema do bootcamp | Onde aparece no projeto |
+|---|---|
+| EDA, log do Kafka, chave e ordem, semânticas de entrega | chave = PK, mesma partição nos 3 eventos (camada 3); *at-least-once* (camada 5) |
+| Confluent Cloud, service accounts, ACLs | camada 1 |
+| Schema Registry e data contracts | camada 2 (compatibilidade); tags e regras ficaram para depois |
+| Kafka Connect, CDC com Debezium | camada 3; sink connectors e dead letter topic não feitos |
+| Flink SQL: tabelas, tempo, janelas, produção | camada 4 (watermark, `MATCH_RECOGNIZE`, statements e CFU) |
+| Tableflow e Iceberg | extensão |
+| IA sobre dados em movimento | não implementado |
+| Observabilidade, segurança, custos, multi-region | camada 5 (multi-region/DR só discutido na tabela de confiabilidade) |
 
 ## Autora
 

@@ -112,7 +112,7 @@ operacao() {
   # [validado] ACLs: evidencias/01-fundacao.txt. Custo (a cobrança leva 24-48 h para aparecer):
   confluent billing cost list --start-date 2026-10-27 --end-date "$(date +%F)" | tee evidencias/05-custo.txt
   # Extensão Tableflow: habilitado no console (Topic > Enable Tableflow > Use Confluent storage);
-  # consulta com: python scripts/query_iceberg.py (precisa de TABLEFLOW_* no .env). [validado]
+  # consulta com: python tableflow-iceberg/query_iceberg.py (precisa de TABLEFLOW_* no .env). [validado]
 }
 
 case "${1:-all}" in
