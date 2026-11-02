@@ -1,0 +1,11 @@
+{
+  "_nota": "Amostra de mensagens do topic tx_enriched (console, offsets 1991-1999, particao 0), gerado pelo join tx_stream x desafio.public.accounts. Campos customer_id, account_type, account_status e balance vem de accounts. Modo upsert, chave transaction_id. ts em epoch ms.",
+  "mensagens": [
+    {"offset": 1991, "key": {"transaction_id": 871}, "value": {"card_id": 287, "account_id": 194, "customer_id": 194, "account_type": "CHECKING", "account_status": "BLOCKED", "balance": "36420.12", "merchant_id": 43, "amount": "15.77", "currency": "BRL", "status": "APPROVED", "ts": 1790130479000}},
+    {"offset": 1992, "key": {"transaction_id": 858}, "value": {"card_id": 170, "account_id": 170, "customer_id": 170, "account_type": "CHECKING", "account_status": "ACTIVE", "balance": "36857.23", "merchant_id": 53, "amount": "113.71", "currency": "BRL", "status": "APPROVED", "ts": 1790125027000}},
+    {"offset": 1993, "key": {"transaction_id": 857}, "value": {"card_id": 18, "account_id": 18, "customer_id": 18, "account_type": "CHECKING", "account_status": "ACTIVE", "balance": "23041.74", "merchant_id": 31, "amount": "58.39", "currency": "BRL", "status": "APPROVED", "ts": 1790123540000}},
+    {"offset": 1994, "key": {"transaction_id": 860}, "value": {"card_id": 286, "account_id": 99, "customer_id": 99, "account_type": "CHECKING", "account_status": "BLOCKED", "balance": "42656.03", "merchant_id": 18, "amount": "48.24", "currency": "BRL", "status": "APPROVED", "ts": 1790125404000}},
+    {"offset": 1998, "key": {"transaction_id": 864}, "value": {"card_id": 234, "account_id": 234, "customer_id": 193, "account_type": "CHECKING", "account_status": "ACTIVE", "balance": "31027.06", "merchant_id": 41, "amount": "51.81", "currency": "BRL", "status": "APPROVED", "ts": 1790128176000}}
+  ],
+  "avisos_do_join": ["UPSERT_AND_PRIMARY_KEYS_DIFFERENT", "HIGH_STATE_OPERATOR_WITHOUT_TTL"]
+}

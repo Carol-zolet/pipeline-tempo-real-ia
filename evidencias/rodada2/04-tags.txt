@@ -1,0 +1,17 @@
+>> PII em customers.full_name (schema 100001)
+[{"typeName":"PII","entityStatus":"ACTIVE","entityType":"sr_field","entityName":"lsrc-38dgwyo:.:100001:desafio.public.customers.Value.full_name"}]
+>> PII em customers.email (schema 100001)
+[{"typeName":"PII","entityStatus":"ACTIVE","entityType":"sr_field","entityName":"lsrc-38dgwyo:.:100001:desafio.public.customers.Value.email"}]
+>> PII em customers.phone (schema 100001)
+[{"typeName":"PII","entityStatus":"ACTIVE","entityType":"sr_field","entityName":"lsrc-38dgwyo:.:100001:desafio.public.customers.Value.phone"}]
+>> PCI em cards.last4 (schema 100003)
+[{"typeName":"PCI","entityStatus":"ACTIVE","entityType":"sr_field","entityName":"lsrc-38dgwyo:.:100003:desafio.public.cards.Value.last4"}]
+>> Conferindo tags nos campos
+-- customers.full_name
+[{"typeName":"PII","attributes":{"__color":null},"entityStatus":"ACTIVE","propagate":false,"removePropagationsOnEntityDelete":false,"entityType":"sr_field","entityName":"lsrc-38dgwyo:.:100001:desafio.public.customers.Value.full_name"}]
+-- customers.email
+[{"typeName":"PII","attributes":{"__color":null},"entityStatus":"ACTIVE","propagate":false,"removePropagationsOnEntityDelete":false,"entityType":"sr_field","entityName":"lsrc-38dgwyo:.:100001:desafio.public.customers.Value.email"}]
+-- customers.phone
+[{"typeName":"PII","attributes":{"__color":null},"entityStatus":"ACTIVE","propagate":false,"removePropagationsOnEntityDelete":false,"entityType":"sr_field","entityName":"lsrc-38dgwyo:.:100001:desafio.public.customers.Value.phone"}]
+-- cards.last4
+[{"typeName":"PCI","attributes":{"__color":null},"entityStatus":"ACTIVE","propagate":false,"removePropagationsOnEntityDelete":false,"entityType":"sr_field","entityName":"lsrc-38dgwyo:.:100003:desafio.public.cards.Value.last4"}]

@@ -1,0 +1,39 @@
+>> 1/6 Parar statements Flink (cobram CFU enquanto rodam)
+Deleted Flink SQL statement "i-s-7ac1c899-4e12-480f-ab6e-71e2fbf29246".
+Deleted Flink SQL statement "i-s-6e34febd-15b4-4945-b035-132c4e9c6704".
+Deleted Flink SQL statement "i-s-6b3f2985-a2cd-4749-8fa2-29a5562c457b".
+Deleted Flink SQL statement "i-s-topic-names-6e633717-611d-4da0-aae5-56519657e7d0".
+Deleted Flink SQL statement "workspace-2026-11-02-172346-c016be6e-df6d-4448-8748-b51b8031d09d".
+Deleted Flink SQL statement "i-s-798abb46-6ab7-45b2-a97b-e56d3484afd8".
+Deleted Flink SQL statement "i-s-27c0c487-a81b-4c13-acc5-9434d0e7223f".
+Deleted Flink SQL statement "workspace-2026-11-02-172346-957c27a5-fead-4557-98fa-87240ffab425".
+Deleted Flink SQL statement "i-s-topic-names-95702e8b-daeb-4d0f-9992-9e3aba2f5766".
+Deleted Flink SQL statement "workspace-2026-11-02-172503-a2fda925-388d-4e6c-b260-f9ba89c47ffe".
+Deleted Flink SQL statement "i-s-dd422de1-2184-4363-b607-74bd7e5c0204".
+Deleted Flink SQL statement "i-s-2fb85c4a-48b5-4eaa-9c17-15a31cfd838a".
+Deleted Flink SQL statement "workspace-2026-11-02-172503-5a83a9d0-dba6-4e25-b2b4-71a03c536e2a".
+Deleted Flink SQL statement "i-s-topic-names-cbb11934-1c63-4d04-be84-3efcb55c82fc".
+Deleted Flink SQL statement "workspace-2026-11-02-172643-11d28ac2-613d-4085-b056-246c008cf9b4".
+Deleted Flink SQL statement "i-s-topic-names-00410bfc-3387-41cc-9419-bd11a756d74a".
+Deleted Flink SQL statement "i-s-0bdeb33b-62f8-4e5a-a96a-f66844db5de7".
+Deleted Flink SQL statement "i-s-topic-names-090bc0f6-0c1d-43f4-aafa-1bdf4c2f714a".
+>> 2/6 Remover conectores
+>> 3/6 Remover o replication slot e a publication no Postgres (slot órfão retém WAL e enche o disco)
+Slots restantes no Postgres: 0
+>> 4/6 Apagar API keys extras (Cloud e Tableflow) e as chaves do Kafka
+Deleted API key "ZHTA7I4HGAGJSO7Q".
+>> 5/6 Apagar as service accounts (pertencem à organização: sobrevivem ao environment)
+Deleted IAM service account "sa-0jw1gy2".
+Deleted IAM service account "sa-r2k38w1".
+>> 6/6 Deletar o environment (leva cluster, Schema Registry, compute pools e tópicos)
+Deleted environment "env-8708n5".
+>> Verificação (não deve restar nada do projeto)
+--- confluent environment list
+  Current |     ID     |  Name   | Stream Governance Package  
+----------+------------+---------+----------------------------
+          | env-0kpmr5 | default | ESSENTIALS                 
+--- confluent iam service-account list
+None found.
+--- confluent api-key list
+None found.
+Teardown concluído. Confira os custos em 2-3 dias: confluent billing cost list --start-date 2026-10-27 --end-date <hoje>

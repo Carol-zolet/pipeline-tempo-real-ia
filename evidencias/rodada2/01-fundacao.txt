@@ -1,0 +1,20 @@
+  Current |     ID     |       Name       |          Description           
+----------+------------+------------------+--------------------------------
+          | sa-0jw1gy2 | desafio-producer | escreve nos topicos desafio-*  
+          | sa-r2k38w1 | desafio-consumer | le os topicos desafio-*        
+     Principal    | Permission | Operation | Resource Type |    Resource Name     | Pattern Type  
+------------------+------------+-----------+---------------+----------------------+---------------
+  User:sa-0jw1gy2 | ALLOW      | CREATE    | TOPIC         | __debezium-heartbeat | PREFIXED      
+  User:sa-0jw1gy2 | ALLOW      | CREATE    | TOPIC         | desafio              | PREFIXED      
+  User:sa-0jw1gy2 | ALLOW      | DESCRIBE  | TOPIC         | __debezium-heartbeat | PREFIXED      
+  User:sa-0jw1gy2 | ALLOW      | DESCRIBE  | TOPIC         | desafio              | PREFIXED      
+  User:sa-0jw1gy2 | ALLOW      | WRITE     | TOPIC         | __debezium-heartbeat | PREFIXED      
+  User:sa-0jw1gy2 | ALLOW      | WRITE     | TOPIC         | desafio              | PREFIXED      
+     Principal    | Permission | Operation | Resource Type | Resource Name | Pattern Type  
+------------------+------------+-----------+---------------+---------------+---------------
+  User:sa-r2k38w1 | ALLOW      | DESCRIBE  | TOPIC         | desafio       | PREFIXED      
+  User:sa-r2k38w1 | ALLOW      | READ      | GROUP         | desafio       | PREFIXED      
+  User:sa-r2k38w1 | ALLOW      | READ      | TOPIC         | desafio       | PREFIXED      
+  Current |       Key        |   Description    |   Owner    |    Owner Email    | Resource Type |  Resource   |       Created         
+----------+------------------+------------------+------------+-------------------+---------------+-------------+-----------------------
+          | ZHTA7I4HGAGJSO7Q | desafio-producer | sa-0jw1gy2 | <service account> | kafka         | lkc-6kyxw52 | 2026-11-02T16:35:43Z  

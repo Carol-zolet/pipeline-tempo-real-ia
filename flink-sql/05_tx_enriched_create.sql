@@ -1,4 +1,4 @@
--- [NÃO TESTADO] Camada 4, enriquecimento: tabela de saída (upsert, chave = transaction_id).
+-- [Validado na rodada 2] Camada 4, enriquecimento: tabela de saída (upsert, chave = transaction_id).
 -- Upsert porque o join com `accounts` (changelog do Debezium) pode revisar linhas quando a conta muda.
 -- A coluna da chave vem primeiro (exigência do DISTRIBUTED BY, vista no erro do tx_stream).
 CREATE TABLE tx_enriched (

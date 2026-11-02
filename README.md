@@ -24,11 +24,11 @@ O caso de uso do desafio é um **pipeline de pagamentos**: Postgres (Neon) → C
 | Pasta / arquivo | Camada | Conteúdo |
 |---|---|---|
 | `kafka/schemas/` | 2 Contrato | schema Avro atual de `customers` e as variantes usadas nos testes de compatibilidade (a fundação da camada 1 é criada pelo `setup.sh`) |
-| `cdc-debezium/` | 3 Ingestão | `cdc.json` (conector, sem segredos) e `seed/` (dados sintéticos) |
+| `cdc-debezium/` | 3 Ingestão | `cdc.json` (conector, sem segredos), `seed/` (dados sintéticos) e `seed/apply_tags.sh` (tags PII/PCI por campo, via API do catálogo) |
 | `flink-sql/` | 4 Processamento | statements SQL: enriquecimento e regra de fraude |
 | `tableflow-iceberg/` | Extensão | `query_iceberg.py`: consulta as tabelas Iceberg pelo catálogo REST |
 | `scripts/` | 5 Operação | `metrics.sh`: consulta à Metrics API |
-| `evidencias/` | todas | saídas de comandos e eventos que provam cada camada |
+| `evidencias/` | todas | saídas de comandos e eventos que provam cada camada; `rodada2/` traz as da segunda subida (envelopes completos, tags, enriquecimento, teardown) |
 | `setup.sh` / `teardown.sh` | todas | subir e derrubar o pipeline |
 
 ## Status
@@ -38,9 +38,10 @@ O caso de uso do desafio é um **pipeline de pagamentos**: Postgres (Neon) → C
 - [x] Módulo 1: Kafka (chave por PK preserva ordem; entrega *at-least-once*; 1 partição)
 - [x] Módulo 2: Confluent Cloud (environment, cluster Basic, service accounts, ACLs, Schema Registry)
 - [x] Módulo 3: Kafka Connect + CDC com Debezium (sink connectors e dead letter topic **não** feitos)
-- [x] Módulo 4: Flink SQL (conversão para append-only, watermark, `MATCH_RECOGNIZE`; join de enriquecimento **não** entregue)
+- [x] Módulo 4: Flink SQL (conversão para append-only, watermark, `MATCH_RECOGNIZE`; join de enriquecimento transação × conta entregue na rodada 2)
 - [x] Módulo 5: Tableflow (tópicos Kafka → tabelas Apache Iceberg)
 - [x] Desafio Final consolidado (custo: US$ 21,21, coberto pelo crédito promocional; ver "Custo total e teardown")
+- [x] **Rodada 2 (02/11/2026)**: fechei as lacunas da primeira entrega com uma segunda subida curta da infraestrutura: join de enriquecimento, tags PII/PCI por campo, envelope `op=u` completo e tombstone, e reexecução real do `setup.sh` (fundação e ingestão). Evidências em `evidencias/rodada2/`.
 
 ## Como subir do zero
 
@@ -55,7 +56,7 @@ cp .env.example .env     # preencha os valores; o .env NUNCA é versionado
 ./setup.sh operacao
 ```
 
-**Estado de validação, com honestidade:** os comandos de cada função foram executados durante o desenvolvimento (evidências em `evidencias/`), mas o `setup.sh` **não foi reexecutado do zero** nesta entrega; o `teardown.sh` foi (`evidencias/07-teardown.txt`). Dois passos são manuais: habilitar a replicação lógica e criar o `cdc_user` no Neon (console), e rodar os arquivos de `flink-sql/` no shell do Flink. Dentro do script, os trechos marcados `[não testado]` vêm da documentação e devem ser conferidos antes de confiar.
+**Estado de validação, com honestidade:** na rodada 2 reexecutei o `setup.sh` do zero para a **fundação** (`./setup.sh fundacao`, `evidencias/rodada2/01-fundacao.txt`) e a **ingestão** (`./setup.sh ingestao`: carga do seed, publication e conector, `evidencias/rodada2/03-conector.txt`); ambas funcionaram na primeira tentativa. As funções `contrato` e `processamento` **não** foram reexecutadas via script: o contrato foi validado na primeira rodada e, na segunda, os statements Flink foram rodados à mão no workspace do console. O `teardown.sh` foi executado nas duas rodadas (`evidencias/07-teardown.txt` e `evidencias/rodada2/07-teardown.txt`). Dois passos são manuais: habilitar a replicação lógica e criar o `cdc_user` no Neon (console), e rodar os arquivos de `flink-sql/` no shell do Flink. Dentro do script, os trechos marcados `[não testado]` vêm da documentação e devem ser conferidos antes de confiar.
 
 ## Como derrubar tudo
 
@@ -109,7 +110,7 @@ Para os statements Flink, remove os conectores, apaga o replication slot no Post
 
 ## Camada 2: Contrato de dados (`kafka/schemas/`)
 
-**O que faz:** O Debezium registra automaticamente um schema Avro por tabela no Schema Registry (subjects `desafio.public.<tabela>-value`, envelope com `before`/`after`/`source`/`op`). Esses schemas são o contrato do pipeline (namespace `desafio.public.<tabela>` gerado pelo conector, não um namespace próprio; `amount` aparece como `bytes` com `decimal(15,2)` no Avro). **Não apliquei tags de PII/PCI** no Schema Registry: os campos sensíveis (`customers.full_name`, `email`, `phone`; `cards.last4`) estão apenas comentados em `00_schema.sql`. Em `kafka/schemas/` ficam o schema atual de `customers` e três variantes usadas nos testes de evolução.
+**O que faz:** O Debezium registra automaticamente um schema Avro por tabela no Schema Registry (subjects `desafio.public.<tabela>-value`, envelope com `before`/`after`/`source`/`op`). Esses schemas são o contrato do pipeline (namespace `desafio.public.<tabela>` gerado pelo conector, não um namespace próprio; `amount` aparece como `bytes` com `decimal(15,2)` no Avro). **Tags de PII/PCI (rodada 2):** os campos sensíveis foram classificados no catálogo do Stream Governance, por campo: `PII` em `customers.full_name`, `email` e `phone`, e `PCI` em `cards.last4`. Fiz pela API do catálogo (`cdc-debezium/seed/apply_tags.sh`, entidade `sr_field`, nome `<sr-id>:.:<schema-id>:desafio.public.<tabela>.Value.<campo>`), porque a aba Schema do console só oferecia tag no nível do schema ou do topic. A resposta da API, com as 4 tags `ACTIVE`, está em `evidencias/rodada2/04-tags.txt`. A tag vale para `before` e `after`, que usam o mesmo record `Value`. Em `kafka/schemas/` ficam o schema atual de `customers` e três variantes usadas nos testes de evolução.
 
 **Por que assim:** Mantive a compatibilidade `BACKWARD` (padrão do Schema Registry): o consumidor novo lê dados antigos, então os consumidores (Flink, Tableflow) podem ser atualizados antes do produtor. Nessa regra, adicionar campo opcional com `default` é seguro; adicionar campo obrigatório sem `default` quebra, porque o consumidor novo não saberia preencher o campo nos dados antigos. Remover campo é aceito em `BACKWARD` (o consumidor novo ignora o que sumiu); para barrar remoções seria preciso `FORWARD` ou `FULL`, trade-off que registrei na tabela de decisões. Os testes usam `validate`, que não registra versão e não suja o subject.
 
@@ -138,15 +139,19 @@ Seed determinístico (`seed=42`) carregado no Postgres 18 do Neon (`cdc-debezium
 (1 row)
 ```
 
-Eventos capturados (`evidencias/03-envelopes-cdc.json`; o console truncou o envelope `op=u`, que ficou com `...` no trecho omitido, e o tombstone que o Debezium emite depois do DELETE não foi conferido):
+Eventos capturados na rodada 2, completos e conferidos contra o JSON baixado do console (`evidencias/rodada2/03-envelopes-cdc.json`; a captura da primeira rodada, `evidencias/03-envelopes-cdc.json`, tinha o `op=u` truncado):
 
 - `op=c` (INSERT): `before: null`, `after` com `city = Nova Prata` (offset 200)
 - `op=u` (UPDATE): `before` preenchido com `Nova Prata` e `after` com `Caxias do Sul` (offset 201)
 - `op=d` (DELETE): `before` completo, `after: null` (offset 202); a mesma chave `customer_id=201` nos 3 eventos preserva a ordem na partição
+- **tombstone** (offset 203): mesma chave, valor `null`, emitido logo depois do `op=d`; é ele que permite à compactação de log remover a chave
+- `op=r` (snapshot): offsets 0 a 199, com `source.snapshot = true` e `last_in_data_collection` no último; no `transactions`, a última mensagem do snapshot inteiro traz `snapshot = last`
+
+Na rodada 2 o `op=u` mostra `phone` 11999990000 → 48988880000 e `city` Curitiba → Florianópolis (offset 201), com `before` e `after` completos, o que comprova o `REPLICA IDENTITY FULL`.
 
 ## Camada 4: Processamento (`flink-sql/`)
 
-**Escopo entregue:** conversão para append-only e regra de fraude. O **enriquecimento transação × conta** (join com `accounts`) ficou de fora; a justificativa está nas decisões abaixo.
+**Escopo entregue:** conversão para append-only, regra de fraude e, na rodada 2, o **enriquecimento transação × conta** (join com `accounts`).
 
 **O que faz:** Dois statements Flink SQL contínuos num compute pool de até 5 CFU. (1) `tx-stream-insert` converte `desafio.public.transactions` (changelog `retract` do Debezium) numa tabela append-only `tx_stream`, com `created_at` convertido para `TIMESTAMP(3)` e watermark. (2) `fraud-detect` aplica um `MATCH_RECOGNIZE` particionado por cartão e grava em `fraud_alerts` quando há 3 transações do mesmo cartão em até 60 s (`PATTERN (T{3}) WITHIN INTERVAL '60' SECOND`). Statements em `flink-sql/01..04_*.sql`.
 
@@ -156,7 +161,9 @@ Eventos capturados (`evidencias/03-envelopes-cdc.json`; o console truncou o enve
 - Watermark com folga de 1 ms: o aviso `WATERMARK_EQUAL` do Flink mostrou que, sem folga, eventos com o mesmo `ts` contam como atrasados. Folga maior atrasaria o alerta; folga menor perderia eventos. Evento muito fora de ordem continua sendo ignorado.
 - Como o `MATCH_RECOGNIZE` só libera uma linha quando o watermark a ultrapassa e a tabela tem pouco tráfego, o alerta depende de um evento posterior de qualquer cartão. Em produção o fluxo contínuo resolve isso; no teste uso uma transação de outro cartão.
 - `AFTER MATCH SKIP PAST LAST ROW`: uma rajada gera um alerta, não vários sobrepostos.
-- Um join de enriquecimento com `accounts` ficou fora desta entrega: o join temporal descartaria as transações do seed, porque as contas só têm versão a partir do snapshot e as transações são de setembro. Um join comum guardaria estado sem limite. Fica como próximo passo.
+- **Enriquecimento (rodada 2):** `tx_enriched` é o join de `tx_stream` com `desafio.public.accounts` por `account_id` (`flink-sql/05_*` e `06_*`), em modo upsert com chave `transaction_id`. Escolhi o **join comum** e não o temporal: o temporal (`FOR SYSTEM_TIME AS OF`) exigiria versões de `accounts` anteriores ao `ts` da transação, e as contas só têm versão a partir do snapshot, enquanto as transações do seed são de setembro (hipótese que não cheguei a testar; escolhi o caminho seguro). O topic de saída `tx_enriched` chegou a pelo menos 2000 mensagens (offsets até 1999), e cada uma traz `customer_id`, `account_type`, `account_status` e `balance` que não existem em `transactions` (`evidencias/rodada2/05-tx-enriched-amostra.json` e `05-tx-enriched-offset1991.json`). O join é por `account_id`, e não por `card_id`, porque a conta do cartão pode ser diferente (cartão 234 pertence à conta 234, cujo cliente é o 193).
+- **Trade-offs do join, avisos reais do Flink:** `UPSERT_AND_PRIMARY_KEYS_DIFFERENT` (o Flink não derivou a chave de upsert do join e pode inserir um operador de correção que consome estado) e `HIGH_STATE_OPERATOR_WITHOUT_TTL` (o join comum guarda estado sem TTL; em produção eu definiria `sql.state-ttl`, como está no `06_tx_enrich.sql`, mas na execução da rodada 2 rodei sem ele, por ser uma carga curta). Um `COUNT(*)` sem `GROUP BY` que usei para conferir o resultado também gerou `AGGREGATION_WITHOUT_KEY`, inofensivo numa conferência única.
+- Os dados sintéticos têm transações `APPROVED` em contas `BLOCKED` (por exemplo, a transação 871); o enriquecimento torna possível uma segunda regra a partir delas.
 
 **Evidência** (`evidencias/04-fraude.txt`):
 
@@ -296,10 +303,16 @@ Deleted environment "env-o7mj39".
 --- confluent api-key list             -> None found.
 ```
 
+### Rodada 2 (02/11/2026): custo e teardown
+
+- Infraestrutura nova (`env-8708n5`, cluster `lkc-6kyxw52`, conector `lcc-w7kx2k5`) criada e destruída no mesmo dia. O conector ficou ligado de cerca de 13:43 a 14:15 (horário de Brasília), apenas o tempo de capturar os eventos; os statements do Flink rodaram por cerca de 25 minutos antes de serem parados e apagados.
+- **Custo da rodada 2: ainda não consultado.** A fatura tem defasagem de 24 a 48 horas. Pela tarifa (US$ 0,50 por task-hora de conector), a ordem de grandeza é de alguns dólares no máximo, e deve cair no crédito promocional; atualizo este número depois de rodar `confluent billing cost list`.
+- `./teardown.sh` executado (saída em `evidencias/rodada2/07-teardown.txt`): 18 statements do Flink apagados (incluindo os que o próprio console cria), publication removida, **0 slots restantes** no Postgres, API key do produtor e as duas service accounts apagadas, environment `env-8708n5` apagado. A verificação final mostra só o environment `default`, `None found.` para service accounts e `None found.` para API keys. Os dois erros `API key ... not found` no passo 4 são de chaves da primeira rodada que já tinham sido apagadas e ficaram no `.env`; o script os ignora de propósito.
+
 ## Próximos passos
 
-- Join de enriquecimento (transação × conta), avaliando join temporal ou join comum com TTL de estado.
-- Tags de PII/PCI e regras de qualidade no Schema Registry (data contracts).
+- Testar o join temporal (pelo tempo de chegada) e o join comum com `sql.state-ttl` definido, comparando consumo de CFU e estado.
+- Regras de qualidade no Schema Registry (data contracts) e uma regra de fraude sobre `account_status = BLOCKED`.
 - Dead letter topic e SMT para eventos com defeito; sink connector para entregar o alerta fora do Kafka.
 - Camada de IA: inferência de modelo no Flink SQL, embeddings e agentes sobre `fraud_alerts`.
 - RBAC no lugar de ACLs e Flink com service account própria.

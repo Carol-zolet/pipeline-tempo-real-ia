@@ -1,4 +1,4 @@
--- [NÃO TESTADO] Camada 4, enriquecimento transação × conta (statement contínuo, cobra CFU).
+-- [Validado na rodada 2, executado no workspace do console sem os dois SET abaixo] Camada 4, enriquecimento transação × conta (statement contínuo, cobra CFU).
 -- Join comum (não temporal): o estado cresce com o número de transações, por isso o TTL de estado abaixo.
 -- Por que não temporal: `FOR SYSTEM_TIME AS OF t.ts` exigiria versões de `accounts` anteriores ao ts da
 -- transação; as contas só têm versão a partir do snapshot do CDC e as transações do seed são de setembro,

@@ -1,0 +1,155 @@
+{
+  "_nota": "Envelopes das mensagens de customers (particao 0, offsets 200-203, chave {\"customer_id\": 201}), conferidos contra o JSON baixado do console (Messages > Download). Valores identicos; aqui reorganizados por operacao.",
+  "offset_200_op_c": {
+    "before": null,
+    "after": {
+      "desafio.public.customers.Value": {
+        "customer_id": 201,
+        "full_name": "Teste CDC",
+        "email": "teste.cdc@example.com",
+        "phone": {
+          "string": "11999990000"
+        },
+        "city": {
+          "string": "Curitiba"
+        },
+        "created_at": "2026-11-02T16:46:38.468282Z"
+      }
+    },
+    "source": {
+      "version": "3.2.5.Final",
+      "connector": "postgresql",
+      "name": "desafio",
+      "ts_ms": 1793637998470,
+      "snapshot": {
+        "string": "false"
+      },
+      "db": "neondb",
+      "sequence": {
+        "string": "[null,\"36225976\"]"
+      },
+      "schema": "public",
+      "table": "customers",
+      "txId": {
+        "long": 6181
+      },
+      "lsn": {
+        "long": 36225976
+      },
+      "xmin": null
+    },
+    "op": "c",
+    "ts_ms": {
+      "long": 1793637998997
+    },
+    "transaction": null
+  },
+  "offset_201_op_u": {
+    "before": {
+      "desafio.public.customers.Value": {
+        "customer_id": 201,
+        "full_name": "Teste CDC",
+        "email": "teste.cdc@example.com",
+        "phone": {
+          "string": "11999990000"
+        },
+        "city": {
+          "string": "Curitiba"
+        },
+        "created_at": "2026-11-02T16:46:38.468282Z"
+      }
+    },
+    "after": {
+      "desafio.public.customers.Value": {
+        "customer_id": 201,
+        "full_name": "Teste CDC",
+        "email": "teste.cdc@example.com",
+        "phone": {
+          "string": "48988880000"
+        },
+        "city": {
+          "string": "Florianópolis"
+        },
+        "created_at": "2026-11-02T16:46:38.468282Z"
+      }
+    },
+    "source": {
+      "version": "3.2.5.Final",
+      "connector": "postgresql",
+      "name": "desafio",
+      "ts_ms": 1793638014578,
+      "snapshot": {
+        "string": "false"
+      },
+      "db": "neondb",
+      "sequence": {
+        "string": "[\"36226224\",\"36226728\"]"
+      },
+      "schema": "public",
+      "table": "customers",
+      "txId": {
+        "long": 6183
+      },
+      "lsn": {
+        "long": 36226728
+      },
+      "xmin": null
+    },
+    "op": "u",
+    "ts_ms": {
+      "long": 1793638014713
+    },
+    "transaction": null
+  },
+  "offset_202_op_d": {
+    "before": {
+      "desafio.public.customers.Value": {
+        "customer_id": 201,
+        "full_name": "Teste CDC",
+        "email": "teste.cdc@example.com",
+        "phone": {
+          "string": "48988880000"
+        },
+        "city": {
+          "string": "Florianópolis"
+        },
+        "created_at": "2026-11-02T16:46:38.468282Z"
+      }
+    },
+    "after": null,
+    "source": {
+      "version": "3.2.5.Final",
+      "connector": "postgresql",
+      "name": "desafio",
+      "ts_ms": 1793638032895,
+      "snapshot": {
+        "string": "false"
+      },
+      "db": "neondb",
+      "sequence": {
+        "string": "[\"36227016\",\"36227312\"]"
+      },
+      "schema": "public",
+      "table": "customers",
+      "txId": {
+        "long": 6184
+      },
+      "lsn": {
+        "long": 36227312
+      },
+      "xmin": null
+    },
+    "op": "d",
+    "ts_ms": {
+      "long": 1793638033372
+    },
+    "transaction": null
+  },
+  "offset_203_tombstone": {
+    "key": {
+      "customer_id": 201
+    },
+    "value": null,
+    "_nota": "Tombstone emitido pelo Debezium logo apos o op=d (mesma chave, valor nulo); permite a compactacao de log remover a chave."
+  }
+}
