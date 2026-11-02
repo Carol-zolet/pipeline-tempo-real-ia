@@ -153,7 +153,7 @@ O `before` completo no `op=u` e no `op=d` comprova o `REPLICA IDENTITY FULL`. A 
 
 **Escopo entregue:** conversão para append-only, regra de fraude e, na rodada 2, o **enriquecimento transação × conta** (join com `accounts`).
 
-**O que faz:** Dois statements Flink SQL contínuos num compute pool de até 5 CFU. (1) `tx-stream-insert` converte `desafio.public.transactions` (changelog `retract` do Debezium) numa tabela append-only `tx_stream`, com `created_at` convertido para `TIMESTAMP(3)` e watermark. (2) `fraud-detect` aplica um `MATCH_RECOGNIZE` particionado por cartão e grava em `fraud_alerts` quando há 3 transações do mesmo cartão em até 60 s (`PATTERN (T{3}) WITHIN INTERVAL '60' SECOND`). Statements em `flink-sql/01..04_*.sql`.
+**O que faz:** Três statements Flink SQL contínuos num compute pool de até 5 CFU (os dois primeiros na rodada 1, o terceiro na rodada 2). (1) `tx-stream-insert` converte `desafio.public.transactions` (changelog `retract` do Debezium) numa tabela append-only `tx_stream`, com `created_at` convertido para `TIMESTAMP(3)` e watermark. (2) `fraud-detect` aplica um `MATCH_RECOGNIZE` particionado por cartão e grava em `fraud_alerts` quando há 3 transações do mesmo cartão em até 60 s (`PATTERN (T{3}) WITHIN INTERVAL '60' SECOND`). (3) `tx-enrich` (rodada 2) faz o join com `accounts` e grava em `tx_enriched`. Statements em `flink-sql/01..06_*.sql`.
 
 **Por que assim:**
 - `MATCH_RECOGNIZE` não aceita entrada que atualiza ou apaga linhas, então a tabela do Debezium passa por `TO_CHANGELOG` (só inserts; transações são imutáveis) antes da regra.
