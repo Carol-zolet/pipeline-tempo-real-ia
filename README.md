@@ -179,7 +179,7 @@ card_id | first_ts                | last_ts                 | tx_count | total_a
 |---|---|
 | Observabilidade | Metrics API (`scripts/metrics.sh`, resumo em `evidencias/05-metricas-resumo.txt`): pico de `received_bytes` de **492.200 bytes em 1 minuto** (29/10 00:19 UTC = 28/10 21:19 em Brasília), no snapshot inicial do conector; 396.094 bytes só do tópico `desafio.public.transactions`. Total produzido de 28/10 a 29/10: **819.509 bytes**. **Lag por grupo: nenhum grupo de consumidores ativo** (`evidencias/05-consumer-lag.png`), porque o Flink lê por dentro da plataforma e não há consumidor externo. |
 | Segurança | Tabela abaixo. Duas service accounts com ACLs por prefixo `desafio`, sem permissão em outros tópicos. |
-| Custos | Ver "Custo total e teardown". Alavancas: (1) cluster **Basic** em vez de Standard/Dedicated; (2) **teardown** logo após as evidências e statements Flink parados, porque cluster, conector e CFU cobram por hora de uso; o compute pool tem teto de 5 CFU. |
+| Custos | US$ 21,21 no total (ver "Custo total e teardown"); **o conector é 96,6% do custo** (US$ 20,50: cobra US$ 0,50 por task-hora, ligado ou não ao tráfego, por cerca de 41 h); o cluster Basic custou US$ 0,27. Alavancas medidas: (1) **ligar o conector só pelo tempo necessário**: parar ou apagar logo depois do snapshot e dos eventos de teste, já que o volume (~820 KB) não justifica horas de task; (2) **parar os statements Flink e o Tableflow** assim que a evidência é salva (Flink US$ 0,14 com teto de 5 CFU; Tableflow US$ 0,10 por tópico-hora). |
 | Confiabilidade | Tabela abaixo; elo mais fraco: o conector com `tasks.max=1` e o slot de replicação no Postgres. |
 
 **Prints do console (Confluent Cloud, cluster `desafio-basic`)**
@@ -255,7 +255,17 @@ Cada decisão relevante tomada durante o desenvolvimento é documentada aqui, co
 
 ## Custo total e teardown
 
-- **Custo declarado: US$ 21,21** de uso em outubro/2026 (contrato Pay as you go iniciado em 27/10, junto com o cluster), **totalmente coberto pelo crédito promocional** (FREETRIAL400: -US$ 21,21), **US$ 0,00 cobrados** no cartão; crédito restante de US$ 379 de US$ 400. Fonte: fatura de outubro no console (Billing & payment), print em `evidencias/05-fatura-outubro.png`. A fatura de novembro mostra US$ 0,00 acumulados, confirmando que nada continua cobrando depois do teardown. A divisão por produto (cluster, conector, Flink, Tableflow) não consta no print; a consulta `confluent billing cost list` de 29/10 (`evidencias/05-custo.txt`) ainda não trazia os itens.
+- **Custo declarado: US$ 21,21** de uso em outubro/2026 (contrato Pay as you go iniciado em 27/10, junto com o cluster), **totalmente coberto pelo crédito promocional** (FREETRIAL400: -US$ 21,21), **US$ 0,00 cobrados** no cartão; crédito restante de US$ 379 de US$ 400. Fonte: fatura de outubro no console (Billing & payment), print em `evidencias/05-fatura-outubro.png`. A fatura de novembro mostra US$ 0,00 acumulados, confirmando que nada continua cobrando depois do teardown. Divisão por produto (valor bruto, antes do crédito), de `confluent billing cost list` em `evidencias/05-custo.txt`:
+
+| Produto | Item | Valor |
+|---|---|---|
+| Connect | 1 task do `desafio-postgres-cdc`, US$ 0,50 por task-hora (24 h em 29/10 + 17 h em 30/10) | US$ 20,50 |
+| Kafka | cluster Basic (CKU) + tráfego de rede | US$ 0,27 |
+| Tableflow | US$ 0,10 por tópico-hora (29 e 30/10) | US$ 0,30 |
+| Flink | 0,67 CFU-hora (US$ 0,21 por CFU-hora) | US$ 0,14 |
+| **Total** | | **US$ 21,21** |
+
+**Lição de custo:** o conector, que roda 24 h por dia mesmo sem tráfego, foi 96,6% do gasto; o cluster Basic custou centavos. Ele ficou ligado por cerca de 41 horas, mais do que as evidências exigiam.
 
 ![Fatura de outubro: uso de US$ 21,21 coberto pelo crédito](evidencias/05-fatura-outubro.png)
 
