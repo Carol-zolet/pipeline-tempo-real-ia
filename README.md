@@ -40,7 +40,7 @@ O caso de uso do desafio é um **pipeline de pagamentos**: Postgres (Neon) → C
 - [x] Módulo 3: Kafka Connect + CDC com Debezium (sink connectors e dead letter topic **não** feitos)
 - [x] Módulo 4: Flink SQL (conversão para append-only, watermark, `MATCH_RECOGNIZE`; join de enriquecimento **não** entregue)
 - [x] Módulo 5: Tableflow (tópicos Kafka → tabelas Apache Iceberg)
-- [x] Desafio Final consolidado (custo final a confirmar; ver "Custo total e teardown")
+- [x] Desafio Final consolidado (custo: US$ 21,21, coberto pelo crédito promocional; ver "Custo total e teardown")
 
 ## Como subir do zero
 
@@ -255,7 +255,10 @@ Cada decisão relevante tomada durante o desenvolvimento é documentada aqui, co
 
 ## Custo total e teardown
 
-- **Custo declarado:** _a preencher com o `confluent billing cost list` (período 27/10 a 30/10/2026). A cobrança da Confluent leva de 24 a 48 horas para aparecer: a consulta feita em 29/10 (`evidencias/05-custo.txt`) ainda mostrava só linhas de crédito promocional de US$ 0,00, sem os itens de cluster, conector e Flink._
+- **Custo declarado: US$ 21,21** de uso em outubro/2026 (contrato Pay as you go iniciado em 27/10, junto com o cluster), **totalmente coberto pelo crédito promocional** (FREETRIAL400: -US$ 21,21), **US$ 0,00 cobrados** no cartão; crédito restante de US$ 379 de US$ 400. Fonte: fatura de outubro no console (Billing & payment), print em `evidencias/05-fatura-outubro.png`. A fatura de novembro mostra US$ 0,00 acumulados, confirmando que nada continua cobrando depois do teardown. A divisão por produto (cluster, conector, Flink, Tableflow) não consta no print; a consulta `confluent billing cost list` de 29/10 (`evidencias/05-custo.txt`) ainda não trazia os itens.
+
+![Fatura de outubro: uso de US$ 21,21 coberto pelo crédito](evidencias/05-fatura-outubro.png)
+
 - **Infraestrutura ativa:** de 27/10 (cluster), 28/10 (conector) e 29/10 (Flink e Tableflow) até o teardown em 30/10/2026. O cluster ficou ligado por mais tempo do que o necessário entre as etapas; o teardown foi o último passo.
 - `./teardown.sh` executado em 30/10/2026 (saída completa em `evidencias/07-teardown.txt`):
 
