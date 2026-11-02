@@ -141,13 +141,13 @@ Seed determinístico (`seed=42`) carregado no Postgres 18 do Neon (`cdc-debezium
 
 Eventos capturados na rodada 2, completos e conferidos contra o JSON baixado do console (`evidencias/rodada2/03-envelopes-cdc.json`; a captura da primeira rodada, `evidencias/03-envelopes-cdc.json`, tinha o `op=u` truncado):
 
-- `op=c` (INSERT): `before: null`, `after` com `city = Nova Prata` (offset 200)
-- `op=u` (UPDATE): `before` preenchido com `Nova Prata` e `after` com `Caxias do Sul` (offset 201)
+- `op=c` (INSERT): `before: null`, `after` com `city = Curitiba` (offset 200)
+- `op=u` (UPDATE): `before` com `Curitiba` / `11999990000` e `after` com `Florianópolis` / `48988880000` (offset 201)
 - `op=d` (DELETE): `before` completo, `after: null` (offset 202); a mesma chave `customer_id=201` nos 3 eventos preserva a ordem na partição
 - **tombstone** (offset 203): mesma chave, valor `null`, emitido logo depois do `op=d`; é ele que permite à compactação de log remover a chave
 - `op=r` (snapshot): offsets 0 a 199, com `source.snapshot = true` e `last_in_data_collection` no último; no `transactions`, a última mensagem do snapshot inteiro traz `snapshot = last`
 
-Na rodada 2 o `op=u` mostra `phone` 11999990000 → 48988880000 e `city` Curitiba → Florianópolis (offset 201), com `before` e `after` completos, o que comprova o `REPLICA IDENTITY FULL`.
+O `before` completo no `op=u` e no `op=d` comprova o `REPLICA IDENTITY FULL`. A captura da primeira rodada (`evidencias/03-envelopes-cdc.json`) usou outros valores (`Nova Prata` → `Caxias do Sul`).
 
 ## Camada 4: Processamento (`flink-sql/`)
 
@@ -306,7 +306,7 @@ Deleted environment "env-o7mj39".
 ### Rodada 2 (02/11/2026): custo e teardown
 
 - Infraestrutura nova (`env-8708n5`, cluster `lkc-6kyxw52`, conector `lcc-w7kx2k5`) criada e destruída no mesmo dia. O conector ficou ligado de cerca de 13:43 a 14:15 (horário de Brasília), apenas o tempo de capturar os eventos; os statements do Flink rodaram por cerca de 25 minutos antes de serem parados e apagados.
-- **Custo da rodada 2: ainda não consultado.** A fatura tem defasagem de 24 a 48 horas. Pela tarifa (US$ 0,50 por task-hora de conector), a ordem de grandeza é de alguns dólares no máximo, e deve cair no crédito promocional; atualizo este número depois de rodar `confluent billing cost list`.
+- **Custo da rodada 2: ainda não consultado.** A fatura tem defasagem de 24 a 48 horas. **Estimativa, sem fatura:** pela tarifa de US$ 0,50 por task-hora, cerca de 30 minutos de conector dão entre US$ 0,25 e US$ 0,50, mais centavos de cluster Basic, de Flink (3 statements de 1 CFU por cerca de 25 minutos) e do Schema Registry. O valor real entra aqui depois de `confluent billing cost list`; o esperado é que caia no crédito promocional.
 - `./teardown.sh` executado (saída em `evidencias/rodada2/07-teardown.txt`): 18 statements do Flink apagados (incluindo os que o próprio console cria), publication removida, **0 slots restantes** no Postgres, API key do produtor e as duas service accounts apagadas, environment `env-8708n5` apagado. A verificação final mostra só o environment `default`, `None found.` para service accounts e `None found.` para API keys. Os dois erros `API key ... not found` no passo 4 são de chaves da primeira rodada que já tinham sido apagadas e ficaram no `.env`; o script os ignora de propósito.
 
 ## Próximos passos
@@ -323,7 +323,7 @@ Deleted environment "env-o7mj39".
 |---|---|
 | EDA, log do Kafka, chave e ordem, semânticas de entrega | chave = PK, mesma partição nos 3 eventos (camada 3); *at-least-once* (camada 5) |
 | Confluent Cloud, service accounts, ACLs | camada 1 |
-| Schema Registry e data contracts | camada 2 (compatibilidade); tags e regras ficaram para depois |
+| Schema Registry e data contracts | camada 2 (compatibilidade e tags PII/PCI por campo); regras de qualidade ficaram para depois |
 | Kafka Connect, CDC com Debezium | camada 3; sink connectors e dead letter topic não feitos |
 | Flink SQL: tabelas, tempo, janelas, produção | camada 4 (watermark, `MATCH_RECOGNIZE`, statements e CFU) |
 | Tableflow e Iceberg | extensão |
