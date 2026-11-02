@@ -8,8 +8,8 @@ set -euo pipefail
 set -a; source ./.env; set +a
 : "${CONFLUENT_ENV_ID:?CONFLUENT_ENV_ID vazio no .env}"
 : "${CONFLUENT_CLUSTER_ID:?CONFLUENT_CLUSTER_ID vazio no .env}"
-mkdir -p evidencias
-LOG=evidencias/07-teardown.txt
+EVID="${EVID_DIR:-evidencias}"; mkdir -p "$EVID"
+LOG="$EVID/07-teardown.txt"
 : > "$LOG"
 say() { echo "$@" | tee -a "$LOG"; }
 

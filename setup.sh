@@ -11,6 +11,8 @@ set -euo pipefail
 
 [ -f ./.env ] || { echo "Falta o .env (cp .env.example .env)"; exit 1; }
 set -a; source ./.env; set +a
+EVID="${EVID_DIR:-evidencias}"   # use EVID_DIR=evidencias/rodada2 para não sobrescrever a rodada anterior
+mkdir -p "$EVID"
 
 # grava/atualiza CHAVE=valor no .env (para guardar IDs gerados)
 setenv() {
@@ -59,7 +61,7 @@ PY
   { confluent iam service-account list
     confluent kafka acl list --service-account "$SA_PRODUCER_ID"
     confluent kafka acl list --service-account "$SA_CONSUMER_ID"
-    confluent api-key list; } | tee evidencias/01-fundacao.txt
+    confluent api-key list; } | tee $EVID/01-fundacao.txt
 }
 
 contrato() {
@@ -67,11 +69,11 @@ contrato() {
   # Os schemas dos tópicos CDC são registrados pelo próprio conector (camada 3).
   # Rode esta função DEPOIS de `ingestao`. [validado] testes de compatibilidade (modo BACKWARD):
   S="${TOPIC_PREFIX}.public.customers-value"
-  : > evidencias/02-compatibilidade.txt
+  : > $EVID/02-compatibilidade.txt
   for f in add-optional add-required remove-required; do
-    echo "=== $f ===" | tee -a evidencias/02-compatibilidade.txt
+    echo "=== $f ===" | tee -a $EVID/02-compatibilidade.txt
     confluent schema-registry schema compatibility validate "kafka/schemas/customers-$f.avsc" \
-      --type avro --subject "$S" --version latest 2>&1 | tee -a evidencias/02-compatibilidade.txt
+      --type avro --subject "$S" --version latest 2>&1 | tee -a $EVID/02-compatibilidade.txt
   done
 }
 
@@ -87,7 +89,7 @@ ingestao() {
   confluent connect cluster create --config-file cdc-debezium/cdc.rendered.json \
     --environment "$CONFLUENT_ENV_ID" --cluster "$CONFLUENT_CLUSTER_ID"
   rm -f cdc-debezium/cdc.rendered.json
-  confluent connect cluster list --environment "$CONFLUENT_ENV_ID" --cluster "$CONFLUENT_CLUSTER_ID" | tee evidencias/03-conector.txt
+  confluent connect cluster list --environment "$CONFLUENT_ENV_ID" --cluster "$CONFLUENT_CLUSTER_ID" | tee $EVID/03-conector.txt
   echo "Aguarde o conector ficar RUNNING. Para gerar eventos c/u/d, veja o README (camada 3)."
 }
 
@@ -95,7 +97,7 @@ processamento() {
   echo ">> Camada 4: Processamento (Flink SQL)"
   # [validado] compute pool
   confluent flink compute-pool create desafio-pool --cloud "$CONFLUENT_CLOUD" --region "$CONFLUENT_REGION" \
-    --max-cfu 5 --wait | tee evidencias/04-compute-pool.txt
+    --max-cfu 5 --wait | tee $EVID/04-compute-pool.txt
   # [validado] os statements abaixo foram executados no shell do Flink (confluent flink shell) na ordem:
   #   flink-sql/01_tx_stream_create.sql, 02_tx_stream_insert.sql, 03_fraud_alerts_create.sql, 04_fraud_detect.sql
   # [não testado] execução via CLI em vez do shell; confira a sintaxe com `confluent flink statement create --help`
@@ -109,8 +111,8 @@ operacao() {
   # [validado] métricas (pico de received_bytes e lag) via Metrics API; exige CLOUD_API_KEY no .env:
   #   confluent api-key create --resource cloud
   ./scripts/metrics.sh
-  # [validado] ACLs: evidencias/01-fundacao.txt. Custo (a cobrança leva 24-48 h para aparecer):
-  confluent billing cost list --start-date 2026-10-27 --end-date "$(date +%F)" | tee evidencias/05-custo.txt
+  # [validado] ACLs: $EVID/01-fundacao.txt. Custo (a cobrança leva 24-48 h para aparecer):
+  confluent billing cost list --start-date 2026-10-27 --end-date "$(date +%F)" | tee $EVID/05-custo.txt
   # Extensão Tableflow: habilitado no console (Topic > Enable Tableflow > Use Confluent storage);
   # consulta com: python tableflow-iceberg/query_iceberg.py (precisa de TABLEFLOW_* no .env). [validado]
 }
